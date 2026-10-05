@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weekend Quote Card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,72,400;0,72,700;1,72,400;1,72,700&family=Public+Sans:wght@400;600&display=swap">
+<style>
+/* Kepler Std (Adobe) is used when installed; local() pins exact faces, since the family has 100+ widths and optical sizes. */
+@font-face { font-family: "QC Kepler Display"; font-weight: 400; font-style: normal; src: local("Kepler Std Display"), local("KeplerStd-Disp"); }
+@font-face { font-family: "QC Kepler Display"; font-weight: 400; font-style: italic; src: local("Kepler Std Italic Display"), local("KeplerStd-ItDisp"); }
+@font-face { font-family: "QC Kepler Display"; font-weight: 700; font-style: normal; src: local("Kepler Std Bold Display"), local("KeplerStd-BoldDisp"); }
+@font-face { font-family: "QC Kepler Display"; font-weight: 700; font-style: italic; src: local("Kepler Std Bold Italic Display"), local("KeplerStd-BoldItDisp"); }
+@font-face { font-family: "QC Kepler Text"; font-weight: 400; font-style: normal; src: local("Kepler Std Regular"), local("KeplerStd-Regular"); }
+@font-face { font-family: "QC Kepler Text"; font-weight: 400; font-style: italic; src: local("Kepler Std Italic"), local("KeplerStd-Italic"); }
+@font-face { font-family: "QC Kepler Text"; font-weight: 700; font-style: normal; src: local("Kepler Std Bold"), local("KeplerStd-Bold"); }
+@font-face { font-family: "QC Kepler Text"; font-weight: 700; font-style: italic; src: local("Kepler Std Bold Italic"), local("KeplerStd-BoldIt"); }
+/* Layout: card preview is the hero on the left, a narrow control column on the right; stacks on phones. */
+:root {
+  --bg: #f3f3f1;
+  --panel: #ffffff;
+  --fg: #1c1c1e;
+  --muted: #66666b;
+  --line: #dcdcd8;
+  --accent: #c8102e;
+  --accent-fg: #ffffff;
+  --warn-bg: #fdecef;
+  --warn-fg: #8a0c20;
+  --ui: "Public Sans", system-ui, sans-serif;
+  --serif: "QC Kepler Text", "Newsreader", Georgia, serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #151517; --panel: #1f1f22; --fg: #ededee; --muted: #a0a0a6; --line: #343438;
+  --accent: #ef3a52; --accent-fg: #ffffff; --warn-bg: #3a1419; --warn-fg: #ffb3bd; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #151517; --panel: #1f1f22; --fg: #ededee; --muted: #a0a0a6; --line: #343438;
+  --accent: #ef3a52; --accent-fg: #ffffff; --warn-bg: #3a1419; --warn-fg: #ffb3bd; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.45 var(--ui); padding: 24px 16px; }
+.app { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
+@media (max-width: 900px) { .app { grid-template-columns: minmax(0, 1fr); } }
+header { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+h1 { font: 400 30px/1.1 var(--serif); margin: 0; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); }
+.stage { display: grid; gap: 12px; min-width: 0; position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); }
+@media (max-width: 900px) { .stage { position: static; } }
+canvas { width: 100%; max-width: 100%; height: auto; display: block; box-shadow: 0 1px 3px rgb(0 0 0 / .15); background: #000; }
+canvas { cursor: crosshair; touch-action: none; }
+.stage.drag canvas { outline: 3px dashed var(--accent); outline-offset: 4px; }
+.status { font-size: 13px; color: var(--muted); }
+.warn { background: var(--warn-bg); color: var(--warn-fg); padding: 8px 12px; border-radius: 6px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: grid; gap: 22px; min-width: 0; }
+fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; min-width: 0; }
+legend, .label { font-weight: 600; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0; margin-bottom: 8px; }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+.editor { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; min-height: 5.5em; font: 400 17px/1.4 var(--serif); background: var(--bg); outline: none; overflow-wrap: anywhere; }
+.editor:focus { border-color: var(--accent); }
+.editor b, .editor strong { font-weight: 700; }
+.toolbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+button, .filebtn { font: 600 14px var(--ui); border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 6px; padding: 7px 12px; cursor: pointer; }
+button:hover, .filebtn:hover { border-color: var(--fg); }
+button:focus-visible, .filebtn:focus-within, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fmt { width: 36px; padding: 6px 0; font-family: var(--serif); font-size: 17px; }
+.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.primary:hover { border-color: var(--fg); }
+.filebtn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.row { display: grid; grid-template-columns: 88px minmax(0, 1fr) 44px; gap: 10px; align-items: center; font-size: 14px; }
+.row output { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <h1>Weekend Quote Card</h1>
+    <p>Add a photo, type the quote and who said it, then download the image.</p>
+  </header>
+
+  <div class="stage" id="stage">
+    <canvas id="card" width="2196" height="1420" aria-label="Quote card preview"></canvas>
+    <div class="warn" id="warn" hidden>
+      <span>The text is too long to fit the card.</span>
+      <button type="button" id="fit">Shrink text to fit</button>
+    </div>
+    <div class="status" id="fontStatus"></div>
+  </div>
+
+  <div class="panel">
+    <fieldset>
+      <legend>1. Photo</legend>
+      <div class="toolbar">
+        <label class="filebtn">Choose photo…<input type="file" id="file" accept="image/*"></label>
+      </div>
+      <p class="hint">Or paste a photo (⌘V) or drag one onto the card.</p>
+      <p class="hint"><strong>Click the face</strong> in the photo to center on it, or drag the photo to fine-tune.</p>
+      <div class="row"><label for="zoom">Zoom</label><input type="range" id="zoom" min="100" max="250" value="100"><output for="zoom" id="zoomOut">100%</output></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>2. Text</legend>
+      <div class="toolbar">
+        <button type="button" class="fmt" data-cmd="bold" title="Bold (⌘B)" aria-label="Bold"><b>B</b></button>
+        <button type="button" class="fmt" data-cmd="italic" title="Italic (⌘I)" aria-label="Italic"><i>I</i></button>
+        <span class="hint">Select words, then click B or I.</span>
+      </div>
+      <div class="label" id="quoteLabel">Quote</div>
+      <div class="editor" id="quote" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="quoteLabel">Lethal execution is sometimes touted as a more humane method than, say, electrocution, but nothing about [Wednesday's] events strikes me as remotely humane.</div>
+      <p class="hint">Quotation marks and the dash are added for you.</p>
+      <div class="label" id="attrLabel">Who said it</div>
+      <div class="editor" id="attr" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="attrLabel"><i>Daniel Medwed,</i> a Northeastern University distinguished professor of law, referring to the Sept. 30 botched execution of <b>death row</b> inmate Christa Pike in Tennessee.</div>
+    </fieldset>
+
+    <fieldset>
+      <legend>3. Text size</legend>
+      <div class="row"><label for="qSize">Quote</label><input type="range" id="qSize" min="24" max="56" value="40"><output for="qSize"></output></div>
+      <div class="row"><label for="aSize">Who said it</label><input type="range" id="aSize" min="16" max="34" value="26"><output for="aSize"></output></div>
+      <div><button type="button" id="resetSize">Reset sizes</button></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>4. Save</legend>
+      <div class="actions">
+        <button type="button" class="primary" id="download">Download PNG</button>
+        <button type="button" id="copy">Copy image</button>
+      </div>
+      <p class="hint" id="saveMsg">Saves at 2× (2196 × 1420) for sharp social posts.</p>
+    </fieldset>
+  </div>
+</div>
+
+<script>
+// Card spec from the Figma frame: 1098×710, portrait 518 wide, black quote column with 110/48 padding, 33 gap.
+const W = 1098, H = 710, PW = 518, PAD_X = 48, PAD_Y = 110, GAP = 33, SCALE = 2;
+const QUOTE_FAMILY = '"QC Kepler Display", "Newsreader", Georgia, serif';
+const ATTR_FAMILY = '"QC Kepler Text", "Newsreader", Georgia, serif';
+const DEFAULTS = { qSize: 40, aSize: 26 };
+
+const $ = (id) => document.getElementById(id);
+const canvas = $('card'), ctx = canvas.getContext('2d');
+const quoteEl = $('quote'), attrEl = $('attr');
+let photo = null;
+// Focal point as a fraction of the photo (0–1); the frame centers on it as far as the crop allows.
+let focus = { x: 0.5, y: 0.4 };
+let geo = null;
+let lastEditor = quoteEl;
+
+// --- rich text -> runs ---------------------------------------------------
+function runsFrom(el) {
+  const runs = [];
+  (function walk(node, b, i) {
+    for (const n of node.childNodes) {
+      if (n.nodeType === 3) { runs.push({ text: n.nodeValue, b, i }); continue; }
+      if (n.nodeType !== 1) continue;
+      const tag = n.tagName;
+      if (tag === 'BR') { runs.push({ text: '\n', b, i }); continue; }
+      const st = n.style || {};
+      const nb = b || tag === 'B' || tag === 'STRONG' || parseInt(st.fontWeight) >= 600 || st.fontWeight === 'bold';
+      const ni = i || tag === 'I' || tag === 'EM' || st.fontStyle === 'italic';
+      if ((tag === 'DIV' || tag === 'P') && runs.length) runs.push({ text: '\n', b, i });
+      walk(n, nb, ni);
+    }
+  })(el, false, false);
+  return runs;
+}
+
+function smarten(runs) {
+  let prev = ' ';
+  for (const r of runs) {
+    r.text = r.text.replace(/ /g, ' ').replace(/["']/g, (q, idx, s) => {
+      const before = idx ? s[idx - 1] : prev;
+      const open = /[\s(\[—–-]/.test(before);
+      return q === '"' ? (open ? '“' : '”') : (open ? '‘' : '’');
+    });
+    if (r.text) prev = r.text[r.text.length - 1];
+  }
+  return runs;
+}
+
+function trimRuns(runs) {
+  const out = runs.filter((r) => r.text);
+  if (out.length) { out[0].text = out[0].text.replace(/^\s+/, ''); out[out.length - 1].text = out[out.length - 1].text.replace(/\s+$/, ''); }
+  return out.filter((r) => r.text);
+}
+
+function quoteRuns() {
+  const runs = trimRuns(smarten(runsFrom(quoteEl)));
+  if (!runs.length) return runs;
+  const first = runs[0], last = runs[runs.length - 1];
+  if (!/^“/.test(first.text)) first.text = '“' + first.text;
+  if (!/”$/.test(last.text)) last.text += '”';
+  return runs;
+}
+
+function attrRuns() {
+  const runs = trimRuns(smarten(runsFrom(attrEl)));
+  if (!runs.length) return runs;
+  runs[0].text = runs[0].text.replace(/^[-–—]\s*/, '');
+  runs.unshift({ text: '– ', b: false, i: false });
+  return runs;
+}
+
+// --- layout ----------------------------------------------------------------
+const fontFor = (r, size, family) => `${r.i ? 'italic ' : ''}${r.b ? 700 : 400} ${size}px ${family}`;
+
+// Greedy word wrap; a "word" can mix styles (e.g. italic name + roman comma) and only breaks at whitespace.
+function layout(runs, size, maxW, family) {
+  const words = [];
+  let cur = [];
+  const flush = () => { if (cur.length) words.push(cur); cur = []; };
+  for (const r of runs) {
+    for (const part of r.text.split(/(\n|[ \t]+)/)) {
+      if (!part) continue;
+      if (part === '\n') { flush(); words.push('\n'); }
+      else if (/^[ \t]+$/.test(part)) flush();
+      else { ctx.font = fontFor(r, size, family); cur.push({ text: part, font: ctx.font, w: ctx.measureText(part).width }); }
+    }
+  }
+  flush();
+  ctx.font = fontFor({}, size, family);
+  const space = ctx.measureText(' ').width;
+  const lines = [[]];
+  let lineW = 0;
+  for (const word of words) {
+    if (word === '\n') { lines.push([]); lineW = 0; continue; }
+    const ww = word.reduce((s, seg) => s + seg.w, 0);
+    const line = lines[lines.length - 1];
+    const need = line.length ? lineW + space + ww : ww;
+    if (line.length && need > maxW) { lines.push([word]); lineW = ww; }
+    else { line.push(word); lineW = need; }
+  }
+  return { lines, space, family };
+}
+
+function measure() {
+  const qs = +$('qSize').value, as = +$('aSize').value;
+  const maxW = W - PW - PAD_X * 2;
+  const q = layout(quoteRuns(), qs, maxW, QUOTE_FAMILY);
+  const a = layout(attrRuns(), as, maxW, ATTR_FAMILY);
+  // Line heights from the Figma spec: 40/48 (1.2) and 26/31 (~1.19).
+  const qLh = Math.round(qs * 1.2), aLh = Math.round(as * 31 / 26);
+  const total = q.lines.length * qLh + (a.lines.length && a.lines[0].length ? GAP + a.lines.length * aLh : 0);
+  return { q, a, qs, as, qLh, aLh, total };
+}
+
+function drawBlock(block, size, lh, x, top) {
+  ctx.fillStyle = '#fff';
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = fontFor({}, size, block.family);
+  const m = ctx.measureText('Hg');
+  const asc = m.fontBoundingBoxAscent ?? size * 0.8, desc = m.fontBoundingBoxDescent ?? size * 0.2;
+  block.lines.forEach((line, n) => {
+    const y = top + n * lh + (lh - (asc + desc)) / 2 + asc;
+    let cx = x;
+    line.forEach((word, wi) => {
+      if (wi) cx += block.space;
+      for (const seg of word) { ctx.font = seg.font; ctx.fillText(seg.text, cx, y); cx += seg.w; }
+    });
+  });
+  return top + block.lines.length * lh;
+}
+
+function draw() {
+  ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+
+  // Portrait: cover-fit, then zoom and pan.
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, 0, PW, H); ctx.clip();
+  if (photo) {
+    const z = +$('zoom').value / 100;
+    const s = Math.max(PW / photo.naturalWidth, H / photo.naturalHeight) * z;
+    const dw = photo.naturalWidth * s, dh = photo.naturalHeight * s;
+    const clamp = (v, min) => Math.min(0, Math.max(min, v));
+    const dx = clamp(PW / 2 - focus.x * dw, PW - dw), dy = clamp(H / 2 - focus.y * dh, H - dh);
+    geo = { dx, dy, dw, dh };
+    ctx.drawImage(photo, dx, dy, dw, dh);
+  } else {
+    ctx.fillStyle = '#2a2a2a'; ctx.fillRect(0, 0, PW, H);
+    ctx.fillStyle = '#999'; ctx.font = `400 24px ${ATTR_FAMILY}`; ctx.textAlign = 'center';
+    ctx.fillText('Add a photo', PW / 2, H / 2); ctx.textAlign = 'left';
+  }
+  ctx.restore();
+
+  const m = measure();
+  const x = PW + PAD_X;
+  const top = Math.max(0, (H - m.total) / 2);
+  let y = drawBlock(m.q, m.qs, m.qLh, x, top);
+  if (m.a.lines.length && m.a.lines[0].length) drawBlock(m.a, m.as, m.aLh, x, y + GAP);
+
+  $('warn').hidden = m.total <= H - PAD_Y * 2;
+  for (const id of ['qSize', 'aSize']) document.querySelector(`output[for=${id}]`).textContent = $(id).value + 'px';
+  $('zoomOut').textContent = $('zoom').value + '%';
+}
+
+// --- inputs ----------------------------------------------------------------
+function loadPhoto(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const img = new Image();
+  img.onload = () => {
+    photo = img;
+    $('zoom').value = 100; focus = { x: 0.5, y: 0.4 };
+    draw();
+  };
+  img.onerror = () => { $('saveMsg').textContent = 'That file could not be opened as an image. Try a JPG, PNG or WebP.'; };
+  img.src = URL.createObjectURL(file);
+}
+
+$('file').addEventListener('change', (e) => loadPhoto(e.target.files[0]));
+
+document.addEventListener('paste', (e) => {
+  const file = [...(e.clipboardData?.files || [])].find((f) => f.type.startsWith('image/'));
+  if (file) { e.preventDefault(); loadPhoto(file); return; }
+  // Paste into the editors as plain text so outside formatting doesn't leak in.
+  if (e.target.closest?.('.editor')) {
+    e.preventDefault();
+    document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+  }
+});
+
+const stage = $('stage');
+stage.addEventListener('dragover', (e) => { e.preventDefault(); stage.classList.add('drag'); });
+stage.addEventListener('dragleave', () => stage.classList.remove('drag'));
+stage.addEventListener('drop', (e) => { e.preventDefault(); stage.classList.remove('drag'); loadPhoto(e.dataTransfer.files[0]); });
+
+for (const ed of [quoteEl, attrEl]) {
+  ed.addEventListener('input', draw);
+  ed.addEventListener('focus', () => { lastEditor = ed; });
+}
+document.querySelectorAll('.fmt').forEach((btn) => {
+  btn.addEventListener('mousedown', (e) => e.preventDefault()); // keep the text selection
+  btn.addEventListener('click', () => {
+    if (!lastEditor.contains(document.getSelection().anchorNode)) lastEditor.focus();
+    document.execCommand('styleWithCSS', false, false);
+    document.execCommand(btn.dataset.cmd);
+    draw();
+  });
+});
+
+// Click the photo to center on that point; drag to pan.
+function cardPoint(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+let dragFrom = null, moved = false;
+canvas.addEventListener('pointerdown', (e) => {
+  const p = cardPoint(e);
+  if (!geo || p.x > PW) return;
+  dragFrom = p; moved = false;
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!dragFrom) return;
+  const p = cardPoint(e);
+  if (!moved && Math.hypot(p.x - dragFrom.x, p.y - dragFrom.y) < 4) return;
+  moved = true;
+  const clamp01 = (v) => Math.min(1, Math.max(0, v));
+  focus = { x: clamp01(focus.x - (p.x - dragFrom.x) / geo.dw), y: clamp01(focus.y - (p.y - dragFrom.y) / geo.dh) };
+  dragFrom = p;
+  draw();
+  focus = { x: (PW / 2 - geo.dx) / geo.dw, y: (H / 2 - geo.dy) / geo.dh }; // drop any overshoot past the photo's edge
+});
+canvas.addEventListener('pointerup', (e) => {
+  if (dragFrom && !moved) {
+    const p = cardPoint(e);
+    focus = { x: (p.x - geo.dx) / geo.dw, y: (p.y - geo.dy) / geo.dh };
+    draw();
+  }
+  dragFrom = null;
+});
+
+for (const id of ['zoom', 'qSize', 'aSize']) $(id).addEventListener('input', draw);
+
+$('resetSize').addEventListener('click', () => { $('qSize').value = DEFAULTS.qSize; $('aSize').value = DEFAULTS.aSize; draw(); });
+
+// Shrink both sizes together, keeping their ratio, until the text fits inside the padding.
+$('fit').addEventListener('click', () => {
+  const ratio = +$('aSize').value / +$('qSize').value;
+  let q = +$('qSize').value;
+  while (q > +$('qSize').min) {
+    q--;
+    $('qSize').value = q;
+    $('aSize').value = Math.max(+$('aSize').min, Math.round(q * ratio));
+    if (measure().total <= H - PAD_Y * 2) break;
+  }
+  draw();
+});
+
+// --- save ------------------------------------------------------------------
+const pngBlob = () => new Promise((res) => canvas.toBlob(res, 'image/png'));
+const fileName = () => `weekend-quote-${new Date().toISOString().slice(0, 10)}.png`;
+const say = (t) => { $('saveMsg').textContent = t; };
+const FALLBACK = 'Right-click the card and choose "Save Image As…" or "Copy Image".';
+
+$('download').addEventListener('click', async () => {
+  draw();
+  let downloads = null;
+  try { downloads = await window.claude?.use?.('downloads'); } catch {}
+  if (!downloads) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(await pngBlob());
+    a.download = fileName();
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    say('Saved.');
+    return;
+  }
+  try {
+    await downloads.save({ filename: fileName(), data: await pngBlob() });
+    say('Saved.');
+  } catch (err) {
+    say(err?.code === 'declined' ? 'Download cancelled.' : FALLBACK);
+  }
+});
+
+$('copy').addEventListener('click', () => {
+  draw();
+  try {
+    navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob() })])
+      .then(() => say('Copied. Paste it into Slack or an email.'), () => say(FALLBACK));
+  } catch { say(FALLBACK); }
+});
+
+// --- fonts -----------------------------------------------------------------
+document.fonts.load('40px "QC Kepler Display"').then((faces) => {
+  const kepler = faces.some((f) => f.status === 'loaded');
+  $('fontStatus').textContent = kepler
+    ? 'Using Kepler Std, the house typeface.'
+    : 'Kepler Std isn\u2019t installed on this computer, so a close substitute is shown. Activate Kepler Std in Adobe Fonts for an exact match.';
+}, () => {});
+
+draw();
+const variants = ['400', 'italic 400', '700', 'italic 700'];
+Promise.all(variants.flatMap((v) => [QUOTE_FAMILY, ATTR_FAMILY].map((f) => document.fonts.load(`${v} 40px ${f}`)))).then(draw, draw);
+document.fonts.ready.then(draw);
+</script>
+</body>
+</html>
