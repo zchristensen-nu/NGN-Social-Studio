@@ -155,7 +155,7 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
   </section>
 
   <aside class="panel right" aria-label="Properties">
-    <section class="sec">
+    <section class="sec" id="importSec">
       <div class="sec-head"><h2>Import from story</h2></div>
       <form id="storyForm">
         <textarea class="field" id="storyUrl" rows="3" placeholder="Paste story links, one per line" aria-label="Story links" required></textarea>
@@ -873,6 +873,7 @@ function openFile(f) {
   for (const b of boards) $('boards').insertBefore(b.el, $('addWrap'));
   if (!f.drawn) { for (let i = 0; i < boards.length; i++) select(i, false); f.drawn = true; } // first render of each artboard
   select(start, false);
+  $('importSec').hidden = !!f.story; // a story's file already has its story; import is for the blank post
   requestAnimationFrame(() => boards[active].el.scrollIntoView({ inline: 'center', block: 'nearest' }));
 }
 // save: store the outgoing post's settings first (false when it was just removed or overwritten).
