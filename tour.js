@@ -1,8 +1,10 @@
 // Onboarding: a spotlight on one part of the tool at a time with a tooltip beside it. Runs once per tool on the
 // first visit (remembered in localStorage) and again from the ? button in the bottom-left corner.
 // Tour.init(key, steps): steps are { target: CSS selector, title, body, side: 'right' | 'left' | 'bottom' | 'top' }.
+// Calling init again (a page with several views) swaps the steps the ? button replays and runs them once if unseen.
+// Steps whose target isn't on screen are skipped.
 window.Tour = (() => {
-  let steps = [], i = 0, key = '', ring, tip, onKey;
+  let steps = [], i = 0, key = '', ring, tip, onKey, help;
 
   const seen = () => { try { return localStorage.getItem(key) === 'done'; } catch { return false; } };
   const remember = () => { try { localStorage.setItem(key, 'done'); } catch { /* private window: show again next time */ } };
@@ -10,7 +12,7 @@ window.Tour = (() => {
   function show(n) {
     i = n;
     const step = steps[i], el = document.querySelector(step.target);
-    if (!el) { if (i < steps.length - 1) show(i + 1); else end(); return; }
+    if (!el || !el.getClientRects().length) { if (i < steps.length - 1) show(i + 1); else end(); return; }
     el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     tip.querySelector('.tour-count').textContent = `${i + 1} of ${steps.length}`;
     tip.querySelector('h3').textContent = step.title;
@@ -84,13 +86,17 @@ window.Tour = (() => {
 
   return {
     init(k, s) {
+      if (ring) end(false);
       key = `ngn-studio-tour:${k}`; steps = s;
-      const help = document.createElement('button');
-      help.type = 'button'; help.className = 'help-btn'; help.title = 'Show the tour'; help.setAttribute('aria-label', 'Show the tour');
-      help.innerHTML = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg>';
-      help.addEventListener('click', start);
-      document.body.append(help);
-      if (!seen()) setTimeout(start, 600); // let the canvas and fonts settle so the spotlight lands on final positions
+      if (!help) {
+        help = document.createElement('button');
+        help.type = 'button'; help.className = 'help-btn'; help.title = 'Show the tour'; help.setAttribute('aria-label', 'Show the tour');
+        help.innerHTML = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg>';
+        help.addEventListener('click', start);
+        document.body.append(help);
+      }
+      const k0 = key;
+      if (!seen()) setTimeout(() => { if (key === k0 && !ring) start(); }, 600); // let the canvas and fonts settle so the spotlight lands on final positions
     },
     start,
   };

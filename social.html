@@ -39,6 +39,40 @@
 .corners [data-v=bl] { bottom: 3px; left: 3px; } .corners [data-v=br] { bottom: 3px; right: 3px; }
 .logo-row { display: flex; gap: 12px; align-items: center; }
 #storyForm { display: grid; gap: 6px; }
+/* Views: the latest-stories grid is home; the editor opens a story as an artboard */
+body[data-view="gallery"] main.workspace, body[data-view="editor"] .gallery { display: none; }
+body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chip { display: none; }
+.gallery { min-height: 0; overflow-y: auto; padding: 32px 40px 72px; }
+.gallery-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; max-width: 1400px; margin: 0 auto 24px; }
+.gallery-head h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.gallery-head p { margin: 4px 0 0; color: var(--text-2); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 32px 24px; max-width: 1400px; margin: 0 auto; }
+.tile { display: grid; gap: 10px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.tile-art {
+  position: relative; display: block; aspect-ratio: 4 / 5; container-type: inline-size; overflow: hidden; border-radius: 2px;
+  background: #2a2a2a center / cover; box-shadow: var(--shadow-art); transition: box-shadow .15s, transform .2s cubic-bezier(.16, 1, .3, 1);
+}
+/* The same eased bottom gradient and 80px grid as the Bottom layout, in container units (1080px = 100cqw). */
+.tile-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgb(0 0 0 / .85), rgb(0 0 0 / .67) 18%, rgb(0 0 0 / .33) 42%, rgb(0 0 0 / .08) 60%, transparent 70%); }
+.tile-art svg { position: absolute; z-index: 1; left: 7.41cqw; top: 7.41cqw; width: 5.93cqw; height: 5.93cqw; }
+.tile-head { position: absolute; z-index: 1; left: 7.41cqw; right: 7.41cqw; bottom: 7.41cqw; color: #fff; font: 400 6.67cqw/1.2 "QC Kepler Display", "Newsreader", Georgia, serif; text-wrap: balance; }
+.tile-nophoto { position: absolute; inset: 0 0 40% 0; display: grid; place-items: center; color: rgb(255 255 255 / .5); font-size: 11px; }
+.tile-open {
+  position: absolute; z-index: 2; top: 50%; left: 50%; transform: translate(-50%, -40%); opacity: 0; transition: opacity .15s, transform .2s cubic-bezier(.16, 1, .3, 1);
+  padding: 6px 12px; border-radius: 999px; background: var(--btn); color: #fff; font-weight: 500; white-space: nowrap;
+}
+.tile:hover .tile-art, .tile:focus-visible .tile-art { box-shadow: 0 0 0 2px var(--sel), var(--shadow-art); transform: translateY(-2px); }
+.tile:hover .tile-open, .tile:focus-visible .tile-open { opacity: 1; transform: translate(-50%, -50%); }
+.tile:focus-visible { outline: none; }
+.tile-meta { display: grid; gap: 2px; }
+.tile-title { font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tile-date { color: var(--text-3); font-size: 11px; }
+.tile-date b { color: var(--sel-text); font-weight: 600; }
+.gallery-foot { display: flex; justify-content: center; margin-top: 40px; }
+.back-row { padding: 8px 8px 0; }
+.back-row .btn { color: var(--text-2); padding-left: 4px; }
+.back-row .btn:hover { color: var(--text); }
+@media (max-width: 960px) { .gallery { padding: 24px 16px 64px; } .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 24px 16px; } }
 #storyUrl { resize: vertical; min-height: 64px; font-size: 12px; line-height: 17px; }
 #gOn { width: 96px; }
 /* Gradient handles: an overlay on the artboard, never part of the export. Shown while hovering the post. */
@@ -64,8 +98,21 @@
     <button type="button" class="btn primary" id="download"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg>Export PNG</button>
   </div>
 </header>
+<section class="gallery" id="gallery" aria-label="Latest stories">
+  <div class="gallery-head">
+    <div><h1>Latest stories</h1><p id="galleryStatus">Loading the latest stories…</p></div>
+    <div class="toolbar">
+      <button type="button" class="btn outline" id="galleryRefresh"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>Check for new</button>
+      <button type="button" class="btn primary" id="toEditor"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Blank post</button>
+    </div>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="gallery-foot"><button type="button" class="btn outline" id="galleryMore">Load older stories</button></div>
+</section>
+
 <main class="workspace with-left">
   <aside class="panel left" aria-label="Layouts">
+    <div class="back-row"><button type="button" class="btn" id="toGallery"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Latest stories</button></div>
     <div class="sec-head"><h2>Layouts</h2></div>
     <div class="presets" id="presets"></div>
   </aside>
@@ -385,7 +432,8 @@ function drawGradientUi() {
   set($('gStart'), { cx: g0.x, cy: g0.y });
   set($('gEnd'), { cx: g1.x, cy: g1.y });
   // keep handles ~9px on screen whatever the preview scale
-  const r = 9 * W / canvas.getBoundingClientRect().width || 16;
+  const shown = canvas.getBoundingClientRect().width;
+  const r = shown ? 9 * W / shown : 16;
   $('gStart').setAttribute('r', r); $('gEnd').setAttribute('r', r);
   $('gEnd').style.fill = state.color === '#000' ? 'rgb(255 255 255 / .15)' : '';
   $('gStart').style.fill = state.color === '#000' ? '#fff' : '';
@@ -531,25 +579,51 @@ function loadPhoto(file) {
   loadImage(URL.createObjectURL(file)).then(usePhoto, () => say('That file couldn’t be opened as an image. Try a JPG, PNG or WebP.'));
 }
 
-// Story link -> headline + featured image through the site's public REST API (stories are the `newspost` type).
+// Stories come from the site's public REST API (stories are the `newspost` type).
+const SITE = 'https://news.northeastern.edu';
+const STORY_FIELDS = '_embed=wp:featuredmedia&_fields=id,date,link,slug,title,_links,_embedded';
+function storyFromApi(item) {
+  const media = item._embedded?.['wp:featuredmedia']?.[0];
+  return {
+    id: item.id, slug: item.slug, link: item.link, date: new Date(item.date),
+    title: new DOMParser().parseFromString(item.title.rendered, 'text/html').body.textContent.trim(),
+    src: media?.source_url || null,
+    thumb: media?.media_details?.sizes?.medium_large?.source_url || media?.source_url || null,
+  };
+}
 async function fetchStory(link) {
   let url;
   try { url = new URL(link); } catch { throw new Error('not a link'); }
   if (!/(^|\.)northeastern\.edu$|\.go-vip\.net$/.test(url.hostname)) throw new Error('not a news.northeastern.edu link');
   const slug = url.pathname.split('/').filter(Boolean).pop();
   if (!slug) throw new Error('not a story link');
-  let story;
   for (const type of ['newspost', 'posts']) {
-    const res = await fetch(`${url.origin}/wp-json/wp/v2/${type}?slug=${encodeURIComponent(slug)}&_embed=wp:featuredmedia&_fields=title,_links,_embedded`);
+    const res = await fetch(`${url.origin}/wp-json/wp/v2/${type}?slug=${encodeURIComponent(slug)}&${STORY_FIELDS}`);
     if (!res.ok) continue;
-    [story] = await res.json();
-    if (story) break;
+    const [item] = await res.json();
+    if (item) return storyFromApi(item);
   }
-  if (!story) throw new Error('no published story found');
-  const title = new DOMParser().parseFromString(story.title.rendered, 'text/html').body.textContent;
-  const src = story._embedded?.['wp:featuredmedia']?.[0]?.source_url;
-  const img = src ? await loadImage(src, true).catch(() => null) : null;
-  return { title, img, slug };
+  throw new Error('no published story found');
+}
+
+// Turn stories into artboards. One story fills the selected post when it's still empty; otherwise each gets its own.
+// An artboard already open for a story is reused rather than duplicated.
+async function openStories(stories) {
+  const imgs = await Promise.all(stories.map((st) => (st.src ? loadImage(st.src, true).catch(() => null) : null)));
+  const base = snapshot();
+  let first = -1;
+  stories.forEach((st, n) => {
+    const post = { ...base, photo: imgs[n], focus: { x: 0.5, y: 0.4 }, zoom: 100, title: escapeHtml(st.title), slug: st.slug };
+    const open = boards.findIndex((b) => b.slug === st.slug);
+    let i;
+    if (open >= 0) i = open;
+    else if (!photo && !boards[active].slug && boards[active].title === EMPTY_TITLE && n === 0) { Object.assign(boards[active], post); i = active; select(i, false); }
+    else { addBoard(post); i = boards.length - 1; select(i); }
+    if (first < 0) first = i;
+  });
+  select(first);
+  requestAnimationFrame(() => boards[first].el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }));
+  return imgs.filter((x) => !x).length;
 }
 
 $('storyUrl').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('storyForm').requestSubmit(); });
@@ -561,18 +635,7 @@ $('storyForm').addEventListener('submit', async (e) => {
   const results = await Promise.allSettled(links.map(fetchStory));
   const ok = results.filter((r) => r.status === 'fulfilled').map((r) => r.value);
   const failed = results.map((r, i) => (r.status === 'rejected' ? `${links[i].replace(/^https?:\/\/[^/]+/, '')} (${r.reason instanceof TypeError ? 'couldn’t reach the site' : r.reason.message})` : null)).filter(Boolean);
-  if (ok.length) {
-    // One link fills the selected post; several make one post each, reusing the selected post if it's still empty.
-    const base = snapshot();
-    const posts = ok.map((st) => ({ ...base, photo: st.img, focus: { x: 0.5, y: 0.4 }, zoom: 100, title: escapeHtml(st.title), slug: st.slug }));
-    const reuse = ok.length === 1 || !photo;
-    const first = reuse ? active : boards.length;
-    posts.forEach((p, n) => (n === 0 && reuse ? Object.assign(boards[active], p) : addBoard(p)));
-    for (let i = first; i < first + posts.length; i++) select(i, !(i === first && reuse)); // render each new artboard
-    select(first, false);
-    boards[first].el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-  }
-  const noImage = ok.filter((st) => !st.img).length;
+  const noImage = ok.length ? await openStories(ok) : 0;
   $('storyMsg').textContent = [
     ok.length ? `Loaded ${ok.length === 1 ? 'the story' : `${ok.length} stories`}.` : '',
     noImage ? `${noImage === 1 ? 'One has' : `${noImage} have`} no featured image; add a photo.` : '',
@@ -580,6 +643,79 @@ $('storyForm').addEventListener('submit', async (e) => {
   ].filter(Boolean).join(' ');
 });
 const escapeHtml = (t) => { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
+const EMPTY_TITLE = 'How wildfires creeping toward wine regions in Spain and France may affect this year’s harvest';
+
+// Latest stories: the home view. Each tile previews the post the editor would make (Bottom layout), live from the
+// site; it re-checks every few minutes while open, so a newly published story shows up on its own.
+const gallery = { stories: [], page: 1, seen: new Set(), loading: false, updated: null };
+const BADGE = document.querySelector('.brand svg').outerHTML;
+const ago = (d) => {
+  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' }), m = Math.round((d - Date.now()) / 60000);
+  return Math.abs(m) < 60 ? rtf.format(m, 'minute') : Math.abs(m) < 1440 ? rtf.format(Math.round(m / 60), 'hour') : rtf.format(Math.round(m / 1440), 'day');
+};
+async function fetchLatest(page) {
+  const res = await fetch(`${SITE}/wp-json/wp/v2/newspost?per_page=24&page=${page}&${STORY_FIELDS}`);
+  if (!res.ok) throw new Error(`The site answered ${res.status}.`);
+  return (await res.json()).map(storyFromApi);
+}
+function renderGallery() {
+  const grid = $('grid');
+  grid.innerHTML = '';
+  for (const st of gallery.stories) {
+    const tile = document.createElement('button');
+    tile.type = 'button'; tile.className = 'tile';
+    tile.innerHTML = `<span class="tile-art"${st.thumb ? ` style="background-image:url('${st.thumb}')"` : ''}>
+        ${BADGE}<span class="tile-head"></span>${st.thumb ? '' : '<span class="tile-nophoto">No featured image</span>'}
+        <span class="tile-open">Edit post</span></span>
+      <span class="tile-meta"><span class="tile-title"></span><span class="tile-date">${st.isNew ? '<b>New</b> · ' : ''}${ago(st.date)}</span></span>`;
+    tile.querySelector('.tile-head').textContent = st.title;
+    tile.querySelector('.tile-title').textContent = st.title;
+    tile.addEventListener('click', () => openFromGallery(st));
+    grid.append(tile);
+  }
+  $('galleryStatus').textContent = gallery.updated ? `From news.northeastern.edu · checked ${ago(gallery.updated)}` : 'Loading the latest stories…';
+}
+async function refreshGallery(more = false) {
+  if (gallery.loading) return;
+  gallery.loading = true;
+  $('galleryRefresh').disabled = $('galleryMore').disabled = true;
+  try {
+    const page = more ? gallery.page + 1 : 1;
+    const items = await fetchLatest(page);
+    const fresh = items.filter((st) => !gallery.seen.has(st.id));
+    const firstLoad = !gallery.seen.size;
+    for (const st of fresh) { gallery.seen.add(st.id); st.isNew = !firstLoad && !more; }
+    if (more) { gallery.stories.push(...fresh); gallery.page = page; }
+    else gallery.stories.unshift(...fresh);
+    gallery.updated = new Date();
+    renderGallery();
+    if (firstLoad && document.body.dataset.view === 'gallery') Tour.init('social-gallery', GALLERY_TOUR);
+    if (fresh.length && !firstLoad && !more) say(`${fresh.length} new ${fresh.length === 1 ? 'story' : 'stories'} published.`);
+  } catch (err) {
+    $('galleryStatus').textContent = err instanceof TypeError ? 'Couldn’t reach news.northeastern.edu. Check your connection and try again.' : err.message;
+  } finally {
+    gallery.loading = false;
+    $('galleryRefresh').disabled = $('galleryMore').disabled = false;
+  }
+}
+async function openFromGallery(st) {
+  say('Opening the story…');
+  showView('editor');
+  const noImage = await openStories([st]);
+  say(noImage ? 'This story has no featured image. Add a photo.' : 'Ready to edit.');
+}
+function showView(v) {
+  document.body.dataset.view = v;
+  if (v === 'editor') { drawGradientUi(); Tour.init('social-post', EDITOR_TOUR); }
+  else { renderGallery(); if (gallery.updated) Tour.init('social-gallery', GALLERY_TOUR); }
+}
+$('galleryRefresh').addEventListener('click', () => refreshGallery());
+$('galleryMore').addEventListener('click', () => refreshGallery(true));
+$('toGallery').addEventListener('click', () => showView('gallery'));
+$('toEditor').addEventListener('click', () => showView('editor'));
+setInterval(() => { if (!document.hidden) refreshGallery(); }, 5 * 60 * 1000);
+setInterval(() => { if (document.body.dataset.view === 'gallery') $('galleryStatus').textContent = `From news.northeastern.edu · checked ${ago(gallery.updated || new Date())}`; }, 60 * 1000);
+
 
 // Artboards: each post keeps its own settings; the panels edit the selected one.
 const boards = [];
@@ -733,8 +869,9 @@ Promise.all(['400', 'italic 400', '700', 'italic 700'].map((v) => document.fonts
 document.fonts.ready.then(draw);
 
 CanvasEdit.attach({ canvas: () => canvas, wrap: () => canvas.parentNode, root: stage, W, regions: () => regions, redraw: draw });
-Tour.init('social-post', [
-  { target: '#storyForm', side: 'left', title: 'Start from stories', body: 'Paste one or more news.northeastern.edu links, one per line. Each story becomes its own post with its headline and featured image.' },
+const EDITOR_TOUR = [
+  { target: '#toGallery', side: 'right', title: 'Back to the latest stories', body: 'Return to the grid of recent stories any time. Posts you opened stay here as artboards.' },
+  { target: '#storyForm', side: 'left', title: 'Or paste links', body: 'Paste one or more news.northeastern.edu links, one per line. Each story becomes its own post with its headline and featured image.' },
   { target: '.artboard.selected', side: 'right', title: 'Each post is an artboard', body: 'Click a post to select it; the panels edit the selected one. Click the headline to edit it in place, or click the photo to center it on the subject.' },
   { target: '#presets', side: 'right', title: 'Pick a layout', body: 'Every layout keeps the logo and headline 80px from the edges, so posts line up on the grid.' },
   { target: '#title', side: 'left', title: 'The headline', body: 'Lines balance automatically so no word sits alone. Select words and click B or I to style them.' },
@@ -743,7 +880,14 @@ Tour.init('social-post', [
   { target: '#gOn', side: 'left', title: 'Gradient', body: 'Hover the post to see two handles. Drag them to change the gradient’s direction and length.' },
   { target: '#addBoard', side: 'left', title: 'More posts', body: 'Add a blank post here, or hover a post’s name and click × to delete it.' },
   { target: '#download', side: 'bottom', title: 'Export', body: 'Export PNG saves the selected post. With several posts, Export all saves every one. Click ? in the corner to see this tour again.' },
-]);
+];
+const GALLERY_TOUR = [
+  { target: '.gallery-head', side: 'bottom', title: 'The latest stories, ready to post', body: 'Every story published on news.northeastern.edu shows up here as an Instagram post, newest first. The grid checks for new stories every five minutes.' },
+  { target: '.tile', side: 'right', title: 'Click a story to edit it', body: 'It opens in the editor with its headline and featured image already placed. Adjust the layout, then export.' },
+  { target: '#toEditor', side: 'bottom', title: 'Start from scratch', body: 'Open the editor with a blank post if the story you need isn’t here.' },
+];
+showView('gallery');
+refreshGallery();
 </script>
 </body>
 </html>
