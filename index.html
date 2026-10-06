@@ -47,6 +47,9 @@ body { background: var(--bg); color: var(--fg); font: 15px/1.45 var(--ui); paddi
 header { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
 h1 { font: 400 30px/1.1 var(--serif); margin: 0; text-wrap: balance; }
 header p { margin: 0; color: var(--muted); }
+header nav { margin-left: auto; display: flex; gap: 12px; font-size: 14px; }
+header nav a { color: var(--muted); }
+header nav a[aria-current] { color: var(--fg); font-weight: 600; text-decoration: none; }
 .stage { display: grid; gap: 12px; min-width: 0; position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); }
 @media (max-width: 900px) { .stage { position: static; } }
 canvas { width: 100%; max-width: 100%; height: auto; display: block; box-shadow: 0 1px 3px rgb(0 0 0 / .15); background: #000; }
@@ -82,6 +85,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   <header>
     <h1>Weekend Quote Card</h1>
     <p>Add a photo, type the quote and who said it, then download the image.</p>
+    <nav><a href="./" aria-current="page">Quote card</a><a href="social.html">Social post</a></nav>
   </header>
 
   <div class="stage" id="stage">
