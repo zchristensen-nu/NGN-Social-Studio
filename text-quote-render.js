@@ -1,5 +1,5 @@
-// The text quote card (Figma "car data - quote"), drawn onto any 1080×1350 canvas context. Shared by the Text quote
-// tool and the social editor's text-quote artboards.
+// The text quote card (Figma "car data - quote"), drawn onto any 1080×1350 canvas context, for the social editor’s
+// text-quote and end-slide artboards.
 // TextQuoteCard.draw(ctx, quoteEl, attrEl, editing) -> { regions, fits }: regions feed CanvasEdit; the block whose
 // editor === editing is left for the on-canvas editor to show.
 window.TextQuoteCard = (() => {
