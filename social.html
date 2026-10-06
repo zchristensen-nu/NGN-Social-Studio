@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>Social Post Builder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,7 +44,7 @@
 .caption-actions { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
 .note.flag { color: var(--warn); }
 /* Post kinds: the panels show only the controls the selected artboard uses */
-body[data-kind="quote"] .kind-social, body:not([data-kind="quote"]) .kind-quote { display: none; }
+body:not([data-kind="social"]) .kind-social, body:not([data-kind="quote"]) .kind-quote, body:not([data-kind="end"]) .kind-end, body[data-kind="social"] .kind-fixed { display: none; }
 .quote-note { padding: 12px 16px; }
 .files { display: grid; gap: 2px; padding: 4px 8px 8px; max-height: 30vh; overflow-y: auto; border-bottom: 1px solid var(--line); }
 .files button { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border: 0; border-radius: var(--r); background: none; color: var(--text); font: 12px var(--ui); text-align: left; cursor: pointer; min-width: 0; }
@@ -143,7 +144,7 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
     <div class="files" id="files"></div>
     <div class="kind-social"><div class="sec-head"><h2>Layouts</h2></div>
     <div class="presets" id="presets"></div></div>
-    <p class="note kind-quote quote-note">Text quotes use one fixed layout, so there’s nothing to choose here.</p>
+    <p class="note kind-fixed quote-note">This card uses one fixed layout, so there’s nothing to choose here.</p>
   </aside>
 
   <section class="stage" id="stage" aria-label="Canvas">
@@ -153,6 +154,7 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
         <div class="menu" id="addMenu" role="menu" hidden>
           <button type="button" role="menuitem" data-kind="social"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 17h8M8 14h5"/></svg><span><strong>Social post</strong><small>Photo and headline</small></span></button>
           <button type="button" role="menuitem" data-kind="quote"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg><span><strong>Text quote</strong><small id="quoteHint">A quote on the cream card</small></span></button>
+          <button type="button" role="menuitem" data-kind="end"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span><strong>End slide</strong><small>Link in bio for the full story</small></span></button>
         </div>
       </div>
     </div>
@@ -184,6 +186,11 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
         <button type="button" class="btn outline" id="copyCaption"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>
       </div>
       <p class="note">Draft with Claude opens a chat with the NGN caption prompt and this story. Paste the caption back here, then copy it into Instagram.</p>
+    </section>
+
+    <section class="sec kind-end">
+      <div class="sec-head"><h2>End slide</h2></div>
+      <p class="note">The last slide of the carousel, the same on every story: “Link in bio for the full story: news.northeastern.edu”.</p>
     </section>
 
     <section class="sec kind-quote">
@@ -507,6 +514,14 @@ function drawGradientUi() {
 }
 
 function draw() {
+  if (kind === 'end') {
+    TextQuoteCard.drawEnd(ctx);
+    regions = []; geo = null;
+    $('warn').hidden = true;
+    $('gradUi').style.display = 'none';
+    boards[active].el.querySelector('.name').textContent = 'End slide';
+    return;
+  }
   if (kind === 'quote') {
     const r = TextQuoteCard.draw(ctx, tqQuote, tqAttr, CanvasEdit.editing);
     regions = r.regions; geo = null;
@@ -722,6 +737,7 @@ async function buildStoryFile(st) {
   const posts = [
     { ...DEFAULT_POST, kind: 'social', photo: img, title: escapeHtml(st.title), slug: st.slug },
     ...quotes.map((q) => quotePost(st.slug, q)),
+    { ...DEFAULT_POST, kind: 'end', story: st.slug }, // the carousel's closing slide
   ];
   const f = makeFile(st.title, st.slug, posts);
   Object.assign(f, { link: st.link, credit: st.credit, caption: Captions.template(st.credit) });
@@ -740,7 +756,7 @@ async function openStories(stories) {
       const built = await buildStoryFile(st);
       f = built.file;
       if (stories.length === 1) msg = [
-        built.quotes ? `Built the post and ${built.quotes} text ${built.quotes === 1 ? 'quote' : 'quotes'} from the story. Check names and titles before posting.` : 'Built the post. No quotes with a named speaker turned up for text quotes.',
+        built.quotes ? `Built the post, ${built.quotes} text ${built.quotes === 1 ? 'quote' : 'quotes'} and the end slide from the story. Check names and titles before posting.` : 'Built the post. No quotes with a named speaker turned up for text quotes.',
         built.noImage ? 'This story has no featured image; add a photo.' : '',
       ];
     }
@@ -946,7 +962,8 @@ $('addMenu').addEventListener('click', async (e) => {
   const item = e.target.closest('[data-kind]');
   if (!item) return;
   toggleMenu(false);
-  if (item.dataset.kind === 'social') {
+  if (item.dataset.kind === 'end') newBoards([{ ...DEFAULT_POST, kind: 'end', story: file.story }]);
+  else if (item.dataset.kind === 'social') {
     newBoards([{ ...DEFAULT_POST, kind: 'social', title: 'Write a headline' }]);
   } else await newQuotes();
 });
@@ -1036,7 +1053,7 @@ function save(blob, name) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
-const fileName = (b, n) => `ngn-${b.kind === 'quote' ? 'quote' : 'social'}-${file.story || new Date().toISOString().slice(0, 10)}${boards.length > 1 ? `-${n + 1}` : ''}.png`;
+const fileName = (b, n) => `ngn-${{ quote: 'quote', end: 'end' }[b.kind] || 'social'}-${file.story || new Date().toISOString().slice(0, 10)}${boards.length > 1 ? `-${n + 1}` : ''}.png`;
 const VIDEO_TYPE = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm']
   .find((t) => window.MediaRecorder?.isTypeSupported(t));
 async function recordVideo() {

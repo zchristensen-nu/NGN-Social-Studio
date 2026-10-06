@@ -13,7 +13,7 @@ window.StoryQuotes = (() => {
   // Titles that run into a name ("Secretary of State Marco Rubio" is caught as "State Marco Rubio").
   const TITLE = /^(?:(?:Secretary|State|Senator|Sen\.|Rep\.|Representative|President|Gov\.|Governor|Mayor|Dr\.|Professor|Prof\.|Judge|Chief|Justice|General|Gen\.|Commissioner|Director|Dean)\s+)+/;
   // A descriptor has to name a role; otherwise "According to Jane Doe, organisms adapt ..." would read as a job.
-  const ROLE = /\b(?:professor|director|dean|student|graduate|alum\w*|member|engineer|researcher|scientist|chair|founder|officer|president|lecturer|fellow|author|expert|analyst|manager|head|lead|coordinator|partner|ceo|executive|playwright|physician|doctor|nurse|teacher|instructor|assistant|associate|staff|editor|curator|organizer|spokesperson|attorney|lawyer|economist|historian|candidate|scholar|specialist|advocate|chancellor|provost|coach|captain|player|athlete|artist|designer|owner|leader|official|adviser|advisor|consultant|investigator|epidemiologist|psychologist|sociologist)s?\b/i;
+  const ROLE = /\b(?:professor|director|dean|student|graduate|alum\w*|member|engineer|researcher|scientist|chair|founder|officer|president|lecturer|fellow|author|expert|analyst|manager|head|lead|coordinator|partner|ceo|executive|playwright|physician|doctor|nurse|teacher|instructor|assistant|associate|staff|editor|curator|organizer|spokesperson|attorney|lawyer|economist|historian|candidate|scholar|specialist|advocate|chancellor|provost|coach|captain|player|athlete|artist|designer|owner|leader|official|adviser|advisor|consultant|investigator|epidemiologist|psychologist|sociologist|major)s?\b/i;
 
   // First appositive for each person: "Full Name, <lowercase descriptor>," up to the sentence's next break.
   function people(text) {
@@ -25,6 +25,22 @@ window.StoryQuotes = (() => {
       if (!found.has(full)) found.set(full, m[2].trim().replace(/,$/, ''));
     }
     return found;
+  }
+
+  // House style for the credit under a text quote, from the posted cards: "Name, lowercase title at Northeastern".
+  // AP: titles after a name are lowercase; no leading article; "Northeastern University" shortens to "Northeastern";
+  // a Northeastern role without the affiliation gets "at Northeastern" appended. Outside affiliations stay as written.
+  const TITLE_WORDS = /\b(Professor|Associate|Assistant|Distinguished|University|Teaching|Research|Executive|Director|Dean|Chair|Lecturer|Senior|Vice|Provost|President|Chancellor|Founding|Interim|Emeritus|Adjunct|Visiting)\b/g;
+  const NU_ROLE = /\b(?:professor|student|dean|provost|chancellor|lecturer|faculty|researcher|scientist|alum\w*|graduate|major|college|school of|institute|department|lab|center for|program)\b/i;
+  function houseStyle(desc) {
+    let d = desc.trim().replace(/[.,;]+$/, '');
+    d = d.replace(/^(?:a|an)\s+/i, '').replace(/\band (?:a|an)\s+/g, 'and ');
+    d = d.replace(/^([^,]*?)(?=\s+(?:of|in|at|for)\s|$)/, (lead) => lead.replace(TITLE_WORDS, (w) => (w === 'University' && /Northeastern University/.test(lead) ? w : w.toLowerCase())));
+    d = d.replace(/Northeastern University(’s|'s)?/g, (m, poss) => `Northeastern${poss || ''}`);
+    // "Northeastern professor of X" reads as "professor of X at Northeastern" on the cards.
+    if (/^Northeastern\s/.test(d)) d = `${d.replace(/^Northeastern\s+/, '')} at Northeastern`;
+    if (!/Northeastern/.test(d) && NU_ROLE.test(d) && !/\s(?:at|with)\s+(?!the\s)[A-Z]/.test(d)) d += ' at Northeastern';
+    return d;
   }
 
   function resolve(name, known, all) {
@@ -59,7 +75,7 @@ window.StoryQuotes = (() => {
         quote = quote.replace(/,$/, '.');
         if (!/^[A-Z“‘"]/.test(quote) || !/[.?!]$/.test(quote)) continue; // fragments read badly on their own
         if (quote.length < 60 || quote.length > 260) continue; // 260 characters fills the card at 48px
-        out.push({ quote, name: who, desc: (known.get(who) || '').replace(/^(?:a|an)\s+/, '') });
+        out.push({ quote, name: who, desc: known.get(who) ? houseStyle(known.get(who)) : '' });
       }
     }
     // Prefer one quote per person, then fill with the rest, keeping story order.
@@ -69,5 +85,5 @@ window.StoryQuotes = (() => {
     return picked.sort((x, y) => out.indexOf(x) - out.indexOf(y));
   }
 
-  return { find };
+  return { find, houseStyle };
 })();

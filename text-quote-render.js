@@ -108,13 +108,26 @@ window.TextQuoteCard = (() => {
     });
   }
 
-  function draw(ctx, quoteEl, attrEl, editing) {
+  function background(ctx) {
     ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = ARROW;
     const s = ARROW_SIZE / 36.03;
     for (const [ax, ay] of ARROWS) {
       ctx.save(); ctx.translate(ax, ay); ctx.scale(s, s); ctx.translate(-240.67, -1.01); ctx.fill(ARROW_PATH); ctx.restore();
     }
+  }
+
+  // The closing carousel slide: same cream card, "Link in bio for the full story:" over the site name in bold.
+  // Its top (543) is measured from the posted slides, where the pair sits a little above center.
+  function drawEnd(ctx) {
+    background(ctx);
+    const block = (text, b) => ({ lines: [{ words: [[{ text, font: fontFor({ b }, Q.size), w: 0 }]], w: 0 }], space: 0 });
+    drawBlock(ctx, block('Link in bio for the full story:', false), Q, 543);
+    drawBlock(ctx, block('news.northeastern.edu', true), Q, 543 + Q.lh);
+  }
+
+  function draw(ctx, quoteEl, attrEl, editing) {
+    background(ctx);
     const q = balance(ctx, quoteRuns(quoteEl), Q.size, Q.maxW);
     const attr = runsFrom(attrEl);
     const a = attr.length ? balance(ctx, attr, A.size, A.maxW) : null;
@@ -130,5 +143,5 @@ window.TextQuoteCard = (() => {
 
   /** Resolves once Inter's weights are ready, so the first draw measures with the real font. */
   const ready = () => Promise.all(['400', '700', 'italic 400', 'italic 700'].map((v) => document.fonts.load(`${v} 48px Inter`)));
-  return { W, H, draw, ready };
+  return { W, H, draw, drawEnd, ready };
 })();
