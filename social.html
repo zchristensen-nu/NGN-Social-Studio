@@ -34,6 +34,16 @@
 .corners [data-v=bl] { bottom: 3px; left: 3px; } .corners [data-v=br] { bottom: 3px; right: 3px; }
 .logo-row { display: flex; gap: 12px; align-items: center; }
 #storyForm { display: flex; gap: 4px; }
+#gOn { width: 96px; }
+/* Gradient handles: an overlay on the artboard, never part of the export. Shown while hovering the post. */
+.art-wrap { position: relative; }
+#gradUi { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; opacity: 0; transition: opacity .15s; }
+.art-wrap:hover #gradUi, #gradUi.dragging { opacity: 1; }
+@media (hover: none) { #gradUi { opacity: 1; } }
+#gLine { stroke: #fff; stroke-width: 1.5; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 1px rgb(0 0 0 / .6)); }
+.handle { stroke: #fff; stroke-width: 2.5; vector-effect: non-scaling-stroke; pointer-events: all; cursor: grab; filter: drop-shadow(0 1px 2px rgb(0 0 0 / .5)); }
+#gStart { fill: #000; } #gEnd { fill: rgb(0 0 0 / .15); }
+#gradUi.dragging .handle { cursor: grabbing; }
 </style>
 </head>
 <body>
@@ -55,10 +65,15 @@
   <section class="stage" id="stage" aria-label="Canvas">
     <div class="artboard">
       <div class="frame-label"><span>Instagram post</span><span>1080 × 1350</span></div>
-      <canvas id="card" width="1080" height="1350" aria-label="Post preview"></canvas>
+      <div class="art-wrap">
+        <canvas id="card" width="1080" height="1350" aria-label="Post preview"></canvas>
+        <svg id="gradUi" viewBox="0 0 1080 1350" aria-hidden="true">
+          <line id="gLine"/><circle id="gStart" class="handle" r="16"/><circle id="gEnd" class="handle" r="16"/>
+        </svg>
+      </div>
     </div>
     <div class="toasts">
-      <div class="toast" id="warn" hidden><span class="dot"></span><span>Headline runs past the margins</span><button type="button" id="fit">Shrink to fit</button></div>
+      <div class="toast" id="warn" hidden><span class="dot"></span><span>Headline is too long for this layout. Shorten it or pick a full-width layout.</span></div>
       <div class="toast plain" id="saveMsg" role="status"></div>
     </div>
   </section>
@@ -87,7 +102,6 @@
       <div class="sec-head"><h2>Headline</h2><div class="toolbar"><button type="button" class="btn icon fmt" data-cmd="bold" title="Bold (⌘B)" aria-label="Bold"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg></button>
           <button type="button" class="btn icon fmt" data-cmd="italic" title="Italic (⌘I)" aria-label="Italic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4h-9M14 20H5M15 4 9 20"/></svg></button></div></div>
       <div class="editor" id="title" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Headline">How wildfires creeping toward wine regions in Spain and France may affect this year’s harvest</div>
-      <div class="prop"><label for="size">Size</label><input type="range" id="size" min="40" max="120" value="72"><output class="val" for="size"></output></div>
       <div class="prop wide"><span>Align</span><div class="seg" id="align">
         <button type="button" data-v="left" aria-label="Align left"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 12H3M17 18H3M21 6H3"/></svg></button><button type="button" data-v="center" aria-label="Align center"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 12H7M19 18H5M21 6H3"/></svg></button>
       </div></div>
@@ -114,21 +128,17 @@
       </div>
       <div id="blurControls" hidden>
         <div class="prop"><label for="insetH">Photo height</label><input type="range" id="insetH" min="30" max="90" value="55"><output class="val" for="insetH"></output></div>
-        <div class="prop"><label for="insetM">Side margin</label><input type="range" id="insetM" min="0" max="80" value="0"><output class="val" for="insetM"></output></div>
+        <p class="note">The photo pins to the edge opposite the headline. The headline centers in the blurred band.</p>
       </div>
     </section>
 
     <section class="sec">
-      <div class="sec-head"><h2>Gradient</h2></div>
-      <div class="prop wide"><label for="gDir">Direction</label><select id="gDir">
-        <option value="none">None</option><option value="bottom">From bottom</option><option value="top">From top</option>
-        <option value="left">From left</option><option value="right">From right</option><option value="even">Even tint</option>
-      </select></div>
+      <div class="sec-head"><h2>Gradient</h2>
+        <div class="seg" id="gOn"><button type="button" data-v="on">On</button><button type="button" data-v="off">Off</button></div>
+      </div>
       <div id="gradControls">
         <div class="prop"><label for="gDark">Darkness</label><input type="range" id="gDark" min="0" max="100" value="85"><output class="val" for="gDark"></output></div>
-        <div class="prop"><label for="gReach">Reach</label><input type="range" id="gReach" min="20" max="100" value="70"><output class="val" for="gReach"></output></div>
-        <div class="prop"><label for="gSteps">Smoothness</label><input type="range" id="gSteps" min="2" max="24" value="16"><output class="val" for="gSteps"></output></div>
-        <p class="note">Smoothness is the number of eased stops: 2 is a straight fade, 16 matches the Figma template.</p>
+        <p class="note">Drag the two handles on the post to change the gradient’s direction and length.</p>
       </div>
     </section>
   </aside>
@@ -136,6 +146,7 @@
 <script>
 // Frame spec from the Figma "Bottom" template: 1080×1350, 80px margins, 64px logo, Kepler 72/120%.
 const W = 1080, H = 1350, M = 80, LOGO = 64, LOGO_GAP = 40, FULL_W = 920, NARROW_W = 600;
+const SIZE = 72, GRAD_STEPS = 16; // fixed by the template
 const FAMILY = '"QC Kepler Display", "Newsreader", Georgia, serif';
 
 // The Figma template set. v: top|middle|bottom, h: left|center|right, w: full|narrow, logo corner, gradient direction.
@@ -169,7 +180,13 @@ function setFontStatus(ok) {
 
 const canvas = $('card'), ctx = canvas.getContext('2d');
 const titleEl = $('title');
-const state = { preset: PRESETS[0], logo: 'tl', align: 'left', color: '#fff', bg: 'photo' };
+const state = { preset: PRESETS[0], logo: 'tl', align: 'left', color: '#fff', bg: 'photo', gOn: 'on' };
+// Gradient runs from g0 (full darkness) to g1 (clear), in post pixels; the canvas handles move these.
+let g0 = { x: W / 2, y: H }, g1 = { x: W / 2, y: H * 0.3 };
+const GRAD_FOR = {
+  bottom: [W / 2, H, W / 2, H * 0.3], top: [W / 2, 0, W / 2, H * 0.7],
+  left: [0, H / 2, W * 0.7, H / 2], right: [W, H / 2, W * 0.3, H / 2], even: [W / 2, H, W / 2, 0],
+};
 let photo = null, focus = { x: 0.5, y: 0.4 }, geo = null;
 
 // NGN badge: the lettermark pieces (from badge-ngn.svg) placed in a 2×2 grid inside a 64px circle, per the Figma frame.
@@ -258,24 +275,54 @@ function layout(runs, size, maxW) {
   return { lines, space };
 }
 
+// Like CSS text-wrap: balance: the narrowest width that keeps the greedy line count, so no orphans.
+function balance(runs, size, maxW) {
+  const greedy = layout(runs, size, maxW);
+  const n = greedy.lines.length;
+  if (n < 2) return greedy;
+  let lo = maxW / 2, hi = maxW, best = greedy;
+  for (let i = 0; i < 12; i++) {
+    const mid = (lo + hi) / 2, b = layout(runs, size, mid);
+    if (b.lines.length <= n) { best = b; hi = mid; } else lo = mid;
+  }
+  return best;
+}
+
 // geometry
 function logoBox() {
   return { x: state.logo[1] === 'l' ? M : W - M - LOGO, y: state.logo[0] === 't' ? M : H - M - LOGO };
 }
 
 function textBox() {
-  const p = state.preset, size = +$('size').value, lh = Math.round(size * 1.2);
-  const w = p.w === 'full' ? FULL_W : NARROW_W;
+  const p = state.preset, size = SIZE, lh = Math.round(size * 1.2);
+  const block = balance(runsFrom(titleEl), size, p.w === 'full' ? FULL_W : NARROW_W);
+  // Position by the balanced block's real width so right- and center-anchored layouts still meet their margin.
+  const w = Math.max(...block.lines.map((l) => l.w));
   const x = p.h === 'left' ? M : p.h === 'right' ? W - M - w : (W - w) / 2;
-  const block = layout(runsFrom(titleEl), size, w);
   const h = block.lines.length * lh;
   // Reserve the logo's band when the text shares its edge and overlaps it horizontally.
   const lb = logoBox();
   const overlapX = x < lb.x + LOGO && x + w > lb.x;
   const top = M + (overlapX && state.logo[0] === 't' ? LOGO + LOGO_GAP : 0);
   const bottom = H - M - (overlapX && state.logo[0] === 'b' ? LOGO + LOGO_GAP : 0);
-  const y = p.v === 'top' ? top : p.v === 'bottom' ? bottom - h : (H - h) / 2;
-  return { x, y, w, h, lh, size, block, fits: y >= top - 0.5 && y + h <= bottom + 0.5 };
+  let y = p.v === 'top' ? top : p.v === 'bottom' ? bottom - h : (H - h) / 2;
+  let lo = top, hi = bottom;
+  const b = band();
+  if (b) {
+    // Blurred backdrop: center the headline in the blurred band, keeping clear of the photo edge.
+    lo = Math.max(top, b.y0 + (b.y0 ? LOGO_GAP : 0));
+    hi = Math.min(bottom, b.y1 - (b.y1 < H ? LOGO_GAP : 0));
+    y = (b.y0 + b.y1) / 2 - h / 2;
+    y = h <= hi - lo ? clampRange(y, lo, hi - h) : y;
+  }
+  return { x, y, w, h, lh, size, block, fits: y >= lo - 0.5 && y + h <= hi + 0.5 };
+}
+
+// In blurred-backdrop mode the sharp photo pins to the edge opposite the headline; the rest is the blurred band.
+function band() {
+  if (state.bg !== 'blur' || !photo) return null;
+  const ph = H * +$('insetH').value / 100;
+  return state.preset.v === 'top' ? { y0: 0, y1: H - ph, photoY: H - ph, ph } : { y0: ph, y1: H, photoY: 0, ph };
 }
 
 // drawing
@@ -310,23 +357,31 @@ function drawBlurredBackdrop() {
   ctx.drawImage(mid, 0, 0, W, H);
 }
 
-// Eased stops like the Figma gradient: alpha follows (1 + cos πt) / 2 across `steps` stops.
+// Eased stops like the Figma gradient: alpha follows (1 + cos πt) / 2 between the two handles.
 function drawGradient() {
-  const dir = $('gDir').value;
-  if (dir === 'none') return;
-  const dark = +$('gDark').value / 100, reach = +$('gReach').value / 100, steps = +$('gSteps').value;
+  if (state.gOn === 'off') return;
+  const dark = +$('gDark').value / 100;
   const rgb = state.color === '#000' ? '255,255,255' : '0,0,0';
-  if (dir === 'even') { ctx.fillStyle = `rgba(${rgb},${dark * 0.6})`; ctx.fillRect(0, 0, W, H); return; }
-  const [x0, y0, x1, y1] = {
-    bottom: [0, H, 0, H * (1 - reach)], top: [0, 0, 0, H * reach],
-    left: [0, 0, W * reach, 0], right: [W, 0, W * (1 - reach), 0],
-  }[dir];
-  const grad = ctx.createLinearGradient(x0, y0, x1, y1);
-  for (let i = 0; i < steps; i++) {
-    const t = i / (steps - 1);
+  const grad = ctx.createLinearGradient(g0.x, g0.y, g1.x, g1.y);
+  for (let i = 0; i < GRAD_STEPS; i++) {
+    const t = i / (GRAD_STEPS - 1);
     grad.addColorStop(t, `rgba(${rgb},${(dark * (1 + Math.cos(Math.PI * t)) / 2).toFixed(4)})`);
   }
   ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+}
+
+function drawGradientUi() {
+  const ui = $('gradUi');
+  ui.style.display = state.gOn === 'off' ? 'none' : '';
+  const set = (el, a) => { for (const [k, v] of Object.entries(a)) el.setAttribute(k, v); };
+  set($('gLine'), { x1: g0.x, y1: g0.y, x2: g1.x, y2: g1.y });
+  set($('gStart'), { cx: g0.x, cy: g0.y });
+  set($('gEnd'), { cx: g1.x, cy: g1.y });
+  // keep handles ~9px on screen whatever the preview scale
+  const r = 9 * W / canvas.getBoundingClientRect().width || 16;
+  $('gStart').setAttribute('r', r); $('gEnd').setAttribute('r', r);
+  $('gEnd').style.fill = state.color === '#000' ? 'rgb(255 255 255 / .15)' : '';
+  $('gStart').style.fill = state.color === '#000' ? '#fff' : '';
 }
 
 function draw() {
@@ -344,15 +399,11 @@ function draw() {
     geo = photoGeo(0, 0, W, H);
     drawPhoto(geo);
   } else {
+    const b = band();
     drawBlurredBackdrop();
     ctx.fillStyle = state.color === '#000' ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.25)';
-    ctx.fillRect(0, 0, W, H);
-    // The sharp photo sits centered in the space the headline leaves free.
-    const ih = H * +$('insetH').value / 100, margin = +$('insetM').value;
-    const v = state.preset.v;
-    const [a, b] = v === 'bottom' ? [0, tb.y - LOGO_GAP] : v === 'top' ? [tb.y + tb.h + LOGO_GAP, H] : [0, H];
-    const iy = clampRange((a + b) / 2 - ih / 2, 0, H - ih);
-    geo = photoGeo(margin, iy, W - margin * 2, ih);
+    ctx.fillRect(0, b.y0, W, b.y1 - b.y0);
+    geo = photoGeo(0, b.photoY, W, b.ph);
     drawPhoto(geo);
   }
 
@@ -377,25 +428,26 @@ function draw() {
 
   $('warn').hidden = tb.fits;
   for (const o of document.querySelectorAll('output[for]')) {
-    const id = o.htmlFor.value, unit = { size: 'px', insetM: 'px', gSteps: '' }[id] ?? '%';
+    const id = o.htmlFor.value, unit = '%';
     o.textContent = $(id).value + unit;
   }
   $('blurControls').hidden = state.bg !== 'blur';
-  $('gradControls').hidden = $('gDir').value === 'none';
+  $('gradControls').hidden = state.gOn === 'off';
+  drawGradientUi();
   syncPressed();
   paintRanges();
 }
 
 // controls
 function syncPressed() {
-  for (const [id, val] of [['align', state.align], ['color', state.color], ['bgMode', state.bg], ['corners', state.logo]])
+  for (const [id, val] of [['align', state.align], ['color', state.color], ['bgMode', state.bg], ['corners', state.logo], ['gOn', state.gOn]])
     for (const b of $(id).querySelectorAll('button')) b.setAttribute('aria-pressed', b.dataset.v === val);
   for (const b of $('presets').querySelectorAll('button')) b.setAttribute('aria-pressed', b.dataset.name === state.preset.name);
 }
 
 function applyPreset(p) {
   state.preset = p; state.logo = p.logo; state.align = p.align;
-  $('gDir').value = p.grad;
+  const [ax, ay, bx, by] = GRAD_FOR[p.grad]; g0 = { x: ax, y: ay }; g1 = { x: bx, y: by };
   draw();
 }
 
@@ -415,9 +467,27 @@ const seg = (id, key) => $(id).addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
   state[key] = b.dataset.v; draw();
 });
-seg('align', 'align'); seg('color', 'color'); seg('bgMode', 'bg'); seg('corners', 'logo');
+seg('align', 'align'); seg('color', 'color'); seg('bgMode', 'bg'); seg('corners', 'logo'); seg('gOn', 'gOn');
 
-for (const el of document.querySelectorAll('input[type=range], select')) el.addEventListener('input', draw);
+// Drag a gradient handle; the other end stays put.
+for (const [id, which] of [['gStart', 0], ['gEnd', 1]]) {
+  const el = $(id);
+  el.addEventListener('pointerdown', (e) => {
+    e.stopPropagation(); el.setPointerCapture(e.pointerId); $('gradUi').classList.add('dragging');
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!el.hasPointerCapture(e.pointerId)) return;
+    const p = cardPoint(e), pt = { x: clampRange(p.x, 0, W), y: clampRange(p.y, 0, H) };
+    const other = which ? g0 : g1;
+    if (Math.hypot(pt.x - other.x, pt.y - other.y) < 60) return; // a zero-length gradient has no direction
+    if (which) g1 = pt; else g0 = pt;
+    draw();
+  });
+  el.addEventListener('pointerup', () => $('gradUi').classList.remove('dragging'));
+}
+addEventListener('resize', drawGradientUi);
+
+for (const el of document.querySelectorAll('input[type=range]')) el.addEventListener('input', draw);
 titleEl.addEventListener('input', draw);
 
 document.querySelectorAll('.fmt').forEach((btn) => {
@@ -428,12 +498,6 @@ document.querySelectorAll('.fmt').forEach((btn) => {
     document.execCommand(btn.dataset.cmd);
     draw();
   });
-});
-
-$('fit').addEventListener('click', () => {
-  const size = $('size');
-  while (+size.value > +size.min && !textBox().fits) size.value = +size.value - 1;
-  draw();
 });
 
 // photo input
