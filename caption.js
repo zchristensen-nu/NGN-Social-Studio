@@ -26,7 +26,7 @@ window.Captions = (() => {
     return { line: '@[photo credit]', flag: 'No photo credit on the site. Add the photographer’s handle, or “Courtesy photo”.' };
   }
 
-  const template = (c) => `[Caption copy: two short paragraphs. Use Draft with Claude, or write it here.]
+  const template = (c) => `[Caption copy: two short paragraphs. Use Write with Claude, or write it here.]
 
 🔗 Read more at the link in bio.
 ...
@@ -47,8 +47,51 @@ Use this photo credit line: 📷: ${c.line}${c.flag ? ` (${c.flag})` : ''}
 Draft the caption.`;
   }
 
+  // Published @northeasternglobalnews captions, given to Claude as models for tone and structure (the prompt invites this).
+  const EXAMPLES = ["Could the future of microchip manufacturing be in orbit? @Northeastern student Rhea Dharia spent her co-op helping find out, with work that hitched a ride on a SpaceX rocket.\n\nAs a payload specialist at Besxar Space Industries, the mechanical engineering and bioengineering major helped design reusable canisters that would harness the vacuum of space to produce purer semiconductor material. Each one had to withstand the violent trip up and back down.\n\n🔗 Read more at the link in bio.\n...\n📷: @alysstone, Courtesy Photo\n.\n.\n.\n#NortheasternUniversity #CoOp #Aerospace", "Northeastern professor Ning Wang found that many cells carry \"mechanical memory,\" continuing to react to physical force like exercise long after it's stopped — a discovery he demonstrated by agitating hamster cells in short bursts that matched an hour of continuous stimulation.\n\nWang said stimulating fibroblast cells could boost collagen production and restore youthful elasticity, while similar mechanisms could help older adults or those with limited mobility get more from brief exercise.\n\n🔗 Read more at the link in bio.\n...\n📷: @modoonophoto\n.\n.\n.\n#NortheasternUniversity #Research #Bioengineering #Science", "David Ayman Shamma, director of computing programs at @NUOakland, has spent more than two decades researching AI at NASA, Flickr and Toyota. Now, he's setting his sights on the next era of AI — and predicting that all-purpose models may soon outgrow their usefulness.\n\nShamma said he sees two shifts ahead: more AI running on-device rather than in the cloud, and a move away from massive general-purpose models toward smaller, specialized ones built around real user needs.\n\n🔗 Read more at the link in bio.\n...\n📷: @rubywallau\n.\n.\n.\n#NortheasternUniversity #AI #Computing"];
+  const SYSTEM = `${PROMPT}
+
+The article's text comes in the message, so there is nothing to fetch. Reply with the finished caption only, ready to paste into Instagram: no preamble, no notes, no markdown.
+
+Published captions to model tone and structure on:
+
+${EXAMPLES.map((e, i) => `<example ${i + 1}>\n${e}\n</example ${i + 1}>`).join('\n\n')}`;
+
+  // Write the caption with the Claude API, straight from the browser with the viewer's own key (stored only in their
+  // browser; never in this repo). Official SDK from a pinned CDN build, loaded on first use.
+  let Anthropic;
+  async function generate({ apiKey, title, link, text, credit: c }) {
+    Anthropic ??= (await import('https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.131.0/+esm')).default;
+    const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+    try {
+      const response = await client.beta.messages.create({
+        model: 'claude-opus-5-5',
+        max_tokens: 16000,
+        output_config: { effort: 'medium' },
+        betas: ['server-side-fallback-2026-07-01'],
+        fallbacks: 'default', // a declined request is retried on a fallback model in the same call
+        system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
+        messages: [{
+          role: 'user',
+          content: `Article: ${title}\n${link}\n\n${text}\n\nPhoto credit line to use: 📷: ${c.line}${c.flag ? ` (${c.flag} Keep the placeholder.)` : ''}\n\nWrite the caption.`,
+        }],
+      });
+      if (response.stop_reason === 'refusal') throw new Error('Claude declined to write this caption. Write it by hand, or try again.');
+      const caption = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
+      if (!caption) throw new Error('Claude returned an empty caption. Try again.');
+      return caption;
+    } catch (err) {
+      if (err instanceof Anthropic.AuthenticationError) throw new Error('That API key was rejected. Check it under “API key”.');
+      if (err instanceof Anthropic.PermissionDeniedError) throw new Error('That API key can’t use this model. Ask whoever manages the key.');
+      if (err instanceof Anthropic.RateLimitError) throw new Error('Too many requests right now. Wait a minute and try again.');
+      if (err instanceof Anthropic.APIConnectionError) throw new Error('Couldn’t reach the Claude API. Check your connection.');
+      if (err instanceof Anthropic.APIError) throw new Error(`The Claude API returned an error (${err.status}). Try again.`);
+      throw err;
+    }
+  }
+
   // claude.ai prefills a new chat from ?q=; the same text also goes on the clipboard in case it doesn't.
   const claudeUrl = (link, c) => `https://claude.ai/new?q=${encodeURIComponent(message(link, c))}`;
 
-  return { credit, template, message, claudeUrl };
+  return { credit, template, message, claudeUrl, generate };
 })();
