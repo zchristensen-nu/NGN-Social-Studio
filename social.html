@@ -6,176 +6,133 @@
 <title>Social Post Builder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,72,400;0,72,700;1,72,400;1,72,700&family=Public+Sans:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,72,400;0,72,700;1,72,400;1,72,700&display=swap">
+<link rel="stylesheet" href="studio.css">
 <style>
 /* Kepler Std (Adobe) is used when installed; local() pins the Display cut, since the family has 100+ widths and optical sizes. */
 @font-face { font-family: "QC Kepler Display"; font-weight: 400; font-style: normal; src: local("Kepler Std Display"), local("KeplerStd-Disp"); }
 @font-face { font-family: "QC Kepler Display"; font-weight: 400; font-style: italic; src: local("Kepler Std Italic Display"), local("KeplerStd-ItDisp"); }
 @font-face { font-family: "QC Kepler Display"; font-weight: 700; font-style: normal; src: local("Kepler Std Bold Display"), local("KeplerStd-BoldDisp"); }
 @font-face { font-family: "QC Kepler Display"; font-weight: 700; font-style: italic; src: local("Kepler Std Bold Italic Display"), local("KeplerStd-BoldItDisp"); }
-/* Layout: post preview on the left, control column on the right; stacks on phones. Same chrome as the quote card. */
-:root {
-  --bg: #f3f3f1; --panel: #ffffff; --fg: #1c1c1e; --muted: #66666b; --line: #dcdcd8;
-  --accent: #c8102e; --accent-fg: #ffffff; --warn-bg: #fdecef; --warn-fg: #8a0c20;
-  --ui: "Public Sans", system-ui, sans-serif;
-  --serif: "QC Kepler Display", "Newsreader", Georgia, serif;
-}
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #151517; --panel: #1f1f22; --fg: #ededee; --muted: #a0a0a6; --line: #343438;
-  --accent: #ef3a52; --accent-fg: #ffffff; --warn-bg: #3a1419; --warn-fg: #ffb3bd; color-scheme: dark;
-} }
-:root[data-theme="dark"] {
-  --bg: #151517; --panel: #1f1f22; --fg: #ededee; --muted: #a0a0a6; --line: #343438;
-  --accent: #ef3a52; --accent-fg: #ffffff; --warn-bg: #3a1419; --warn-fg: #ffb3bd; color-scheme: dark;
-}
-* { box-sizing: border-box; }
-[hidden] { display: none !important; }
-body { background: var(--bg); color: var(--fg); font: 15px/1.45 var(--ui); padding: 24px 16px; margin: 0; }
-.app { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
-@media (max-width: 900px) { .app { grid-template-columns: minmax(0, 1fr); } }
-header { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
-h1 { font: 400 30px/1.1 var(--serif); margin: 0; }
-header p { margin: 0; color: var(--muted); }
-header nav { margin-left: auto; display: flex; gap: 12px; font-size: 14px; }
-header nav a { color: var(--muted); }
-header nav a[aria-current] { color: var(--fg); font-weight: 600; text-decoration: none; }
-.stage { display: grid; gap: 12px; justify-items: center; min-width: 0; position: sticky; top: 16px; }
-@media (max-width: 900px) { .stage { position: static; } }
-canvas { display: block; width: auto; height: auto; max-width: 100%; max-height: calc(100vh - 150px); box-shadow: 0 1px 3px rgb(0 0 0 / .15); background: #000; cursor: crosshair; touch-action: none; }
-.stage.drag canvas { outline: 3px dashed var(--accent); outline-offset: 4px; }
-.stage > div { width: 100%; }
-.status { font-size: 13px; color: var(--muted); }
-.warn { background: var(--warn-bg); color: var(--warn-fg); padding: 8px 12px; border-radius: 6px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: grid; gap: 22px; min-width: 0; }
-fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; min-width: 0; }
-legend, .label { font-weight: 600; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0; margin-bottom: 8px; }
-.hint { font-size: 13px; color: var(--muted); margin: 0; }
-.editor { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; min-height: 4.5em; font: 400 18px/1.35 var(--serif); background: var(--bg); outline: none; overflow-wrap: anywhere; }
-.editor:focus { border-color: var(--accent); }
-.toolbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-button, .filebtn { font: 600 14px var(--ui); border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 6px; padding: 7px 12px; cursor: pointer; }
-button:hover, .filebtn:hover { border-color: var(--fg); }
-button:focus-visible, .filebtn:focus-within, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.fmt { width: 36px; padding: 6px 0; font-family: var(--serif); font-size: 17px; }
-.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
-.filebtn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.row { display: grid; grid-template-columns: 96px minmax(0, 1fr) 48px; gap: 10px; align-items: center; font-size: 14px; }
-.row output { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
-.row select { grid-column: 2 / 4; font: 14px var(--ui); padding: 5px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); }
-input[type=range] { width: 100%; accent-color: var(--accent); }
-.seg { display: flex; gap: 6px; flex-wrap: wrap; }
-.seg button { flex: 1; padding: 6px 8px; font-weight: 400; }
-/* Preset thumbnails: a tiny 4:5 frame with the text block and logo dot drawn where the preset puts them. */
-.presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
-.presets button { padding: 6px; display: grid; gap: 4px; justify-items: center; font-weight: 400; font-size: 11px; line-height: 1.2; text-align: center; }
-.mini { position: relative; width: 48px; aspect-ratio: 4 / 5; background: #6b4a3f; border-radius: 2px; overflow: hidden; }
-.mini i { position: absolute; background: repeating-linear-gradient(#fff 0 2px, transparent 2px 4px); height: 10px; }
-.mini b { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #000; box-shadow: 0 0 0 1px #fff; }
-.corners { display: grid; grid-template-columns: repeat(2, 44px); gap: 6px; }
-.corners button { padding: 4px 0; font-size: 16px; }
-#storyUrl { flex: 1; min-width: 0; font: 14px var(--ui); padding: 7px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
-.actions { display: flex; gap: 8px; flex-wrap: wrap; }
-details summary { cursor: pointer; font-size: 14px; color: var(--muted); }
-details[open] summary { margin-bottom: 8px; }
+
+/* Layouts list: Figma assets-panel rows with a schematic of each preset. */
+.presets { display: grid; gap: 2px; padding: 4px 8px 12px; }
+.presets button { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 8px; border: 0; border-radius: var(--r); background: none; color: var(--text); font: 400 12px var(--ui); text-align: left; cursor: pointer; }
+.presets button:hover { background: var(--field); }
+.presets button[aria-pressed="true"] { background: var(--sel-soft); color: var(--sel-text); font-weight: 500; }
+.mini { position: relative; width: 28px; height: 35px; flex: none; border-radius: 3px; overflow: hidden; background: linear-gradient(160deg, #8a5a4a, #3a2620); box-shadow: inset 0 0 0 1px rgb(0 0 0 / .1); }
+.mini i { position: absolute; height: 7px; background: repeating-linear-gradient(#fff 0 1.5px, transparent 1.5px 3px); }
+.mini b { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #000; box-shadow: 0 0 0 1px rgb(255 255 255 / .85); }
+.panel.left .sec-head { padding: 12px 16px 4px; }
+/* Logo corner: a constraint widget like Figma's, four targets on a frame. */
+.corners { position: relative; width: 56px; height: 70px; border-radius: 4px; background: var(--field); flex: none; }
+.corners button { position: absolute; width: 22px; height: 22px; border: 0; background: none; cursor: pointer; display: grid; place-items: center; border-radius: 4px; }
+.corners button::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); box-shadow: 0 0 0 2px var(--field); }
+.corners button:hover::after { background: var(--text); }
+.corners button[aria-pressed="true"]::after { background: var(--sel); }
+.corners [data-v=tl] { top: 3px; left: 3px; } .corners [data-v=tr] { top: 3px; right: 3px; }
+.corners [data-v=bl] { bottom: 3px; left: 3px; } .corners [data-v=br] { bottom: 3px; right: 3px; }
+.logo-row { display: flex; gap: 12px; align-items: center; }
+#storyForm { display: flex; gap: 4px; }
 </style>
 </head>
 <body>
-<div class="app">
-  <header>
-    <h1>Social Post Builder</h1>
-    <p>Instagram 4:5 posts with the logo and text locked to the same margins every time.</p>
-    <nav><a href="./">Quote card</a><a href="social.html" aria-current="page">Social post</a></nav>
-  </header>
-
-  <div class="stage" id="stage">
-    <canvas id="card" width="1080" height="1350" aria-label="Post preview"></canvas>
-    <div class="warn" id="warn" hidden>
-      <span>The headline is too long to fit inside the margins.</span>
-      <button type="button" id="fit">Shrink text to fit</button>
-    </div>
-    <div class="status" id="fontStatus"></div>
+<header class="topbar">
+  <div class="brand"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#000"/><path d="M0,73.07V1.06H12.99L52.81,50.48V1.06h14.32V73.07h-13.2L14.32,24.18v48.89H0Z" fill="#fff" transform="translate(15.3 15.18) scale(0.21955) translate(0 -1.06)"/><path d="M240.67 1.01L240.67 8.21L264.23 8.21L243.23 29.21L248.32 34.31L269.5 13.12L269.5 37.04L276.7 37.04L276.7 1.01Z" fill="#cf2b28" transform="translate(32.49 15.18) scale(0.43880) translate(-240.67 -1.01)"/><path d="M78.46,37.06C78.46,16.01,94.36,0,115.41,0c12.46,0,23.97,5.94,31.55,16.91l-11.29,8.06c-5.62-8.48-12.94-11.72-20.26-11.72-13.1,0-22.27,9.86-22.27,23.81s9.54,23.81,22.64,23.81c11.98,0,18.72-7.05,20.36-14.69h-21.79v-12.35h36.27c.21,1.86,.26,3.98,.26,5.78,0,18.51-13.04,34.52-35.1,34.52s-37.33-16.01-37.33-37.06Z" fill="#fff" transform="translate(14.3 32.78) scale(0.22393) translate(-78.46 0)"/><path d="M162.22,73.07V1.06h12.99l39.82,49.42V1.06h14.32V73.07h-13.2l-39.61-48.89v48.89h-14.32Z" fill="#fff" transform="translate(33.57 33.34) scale(0.21955) translate(-162.22 -1.06)"/></svg><span>Studio</span></div>
+  <nav class="tabs" aria-label="Tools"><a href="./"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/><path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/></svg>Quote card</a><a href="social.html" aria-current="page"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 17h8M8 14h5"/></svg>Social post</a></nav>
+  <div class="top-actions">
+    <span class="font-chip" id="fontStatus"></span>
+    <button type="button" class="btn outline" id="copy"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>
+    <button type="button" class="btn primary" id="download"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg>Export PNG</button>
   </div>
+</header>
+<main class="workspace with-left">
+  <aside class="panel left" aria-label="Layouts">
+    <div class="sec-head"><h2>Layouts</h2></div>
+    <div class="presets" id="presets"></div>
+  </aside>
 
-  <div class="panel">
-    <fieldset>
-      <legend>Start from a story</legend>
-      <form class="toolbar" id="storyForm">
-        <input type="url" id="storyUrl" placeholder="Paste a news.northeastern.edu link" aria-label="Story link" required>
-        <button type="submit">Load</button>
+  <section class="stage" id="stage" aria-label="Canvas">
+    <div class="artboard">
+      <div class="frame-label"><span>Instagram post</span><span>1080 × 1350</span></div>
+      <canvas id="card" width="1080" height="1350" aria-label="Post preview"></canvas>
+    </div>
+    <div class="toasts">
+      <div class="toast" id="warn" hidden><span class="dot"></span><span>Headline runs past the margins</span><button type="button" id="fit">Shrink to fit</button></div>
+      <div class="toast plain" id="saveMsg" role="status"></div>
+    </div>
+  </section>
+
+  <aside class="panel right" aria-label="Properties">
+    <section class="sec">
+      <div class="sec-head"><h2>Import from story</h2></div>
+      <form id="storyForm">
+        <span class="input-icon"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><input class="field" type="url" id="storyUrl" placeholder="news.northeastern.edu/…" aria-label="Story link" required></span>
+        <button type="submit" class="btn icon outline" aria-label="Load story"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
       </form>
-      <p class="hint" id="storyMsg">Pulls in the headline and featured image. You can still change both below.</p>
-    </fieldset>
+      <p class="note" id="storyMsg">Brings in the headline and featured image.</p>
+    </section>
 
-    <fieldset>
-      <legend>1. Photo</legend>
-      <div class="toolbar"><label class="filebtn">Choose photo…<input type="file" id="file" accept="image/*"></label></div>
-      <p class="hint">Or paste (⌘V) or drag a photo onto the post. <strong>Click the subject</strong> to center on it; drag to fine-tune.</p>
-      <div class="row"><label for="zoom">Zoom</label><input type="range" id="zoom" min="100" max="250" value="100"><output for="zoom"></output></div>
-    </fieldset>
+    <section class="sec">
+      <div class="sec-head"><h2>Photo</h2></div>
+      <label class="drop">
+        <span class="thumb" id="thumb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></span>
+        <span><strong>Choose or drop a photo</strong><span class="sub">Or paste with ⌘V. Click the photo on the canvas to set the focus point.</span></span>
+        <input type="file" id="file" accept="image/*">
+      </label>
+      <div class="prop"><label for="zoom">Zoom</label><input type="range" id="zoom" min="100" max="250" value="100"><output class="val" for="zoom"></output></div>
+    </section>
 
-    <fieldset>
-      <legend>2. Headline</legend>
-      <div class="toolbar">
-        <button type="button" class="fmt" data-cmd="bold" title="Bold (⌘B)" aria-label="Bold"><b>B</b></button>
-        <button type="button" class="fmt" data-cmd="italic" title="Italic (⌘I)" aria-label="Italic"><i>I</i></button>
-        <span class="hint">Select words, then click B or I.</span>
-      </div>
+    <section class="sec">
+      <div class="sec-head"><h2>Headline</h2><div class="toolbar"><button type="button" class="btn icon fmt" data-cmd="bold" title="Bold (⌘B)" aria-label="Bold"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg></button>
+          <button type="button" class="btn icon fmt" data-cmd="italic" title="Italic (⌘I)" aria-label="Italic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4h-9M14 20H5M15 4 9 20"/></svg></button></div></div>
       <div class="editor" id="title" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Headline">How wildfires creeping toward wine regions in Spain and France may affect this year’s harvest</div>
-      <p class="hint">Press Return for a manual line break.</p>
-      <div class="row"><label for="size">Size</label><input type="range" id="size" min="40" max="120" value="72"><output for="size"></output></div>
-      <div class="row"><span>Align</span><div class="seg" style="grid-column: 2 / 4" id="align">
-        <button type="button" data-v="left">Left</button><button type="button" data-v="center">Center</button>
+      <div class="prop"><label for="size">Size</label><input type="range" id="size" min="40" max="120" value="72"><output class="val" for="size"></output></div>
+      <div class="prop wide"><span>Align</span><div class="seg" id="align">
+        <button type="button" data-v="left" aria-label="Align left"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 12H3M17 18H3M21 6H3"/></svg></button><button type="button" data-v="center" aria-label="Align center"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 12H7M19 18H5M21 6H3"/></svg></button>
       </div></div>
-      <div class="row"><span>Color</span><div class="seg" style="grid-column: 2 / 4" id="color">
-        <button type="button" data-v="#fff">White</button><button type="button" data-v="#000">Black</button>
+      <div class="prop wide"><span>Color</span><div class="swatches" id="color">
+        <button type="button" data-v="#fff" style="background:#fff" aria-label="White text"></button><button type="button" data-v="#000" style="background:#000" aria-label="Black text"></button>
       </div></div>
-    </fieldset>
+    </section>
 
-    <fieldset>
-      <legend>3. Layout</legend>
-      <div class="presets" id="presets"></div>
-      <div class="label" style="margin-top: 8px">Logo corner</div>
-      <div class="corners" id="corners">
-        <button type="button" data-v="tl" aria-label="Top left">↖</button><button type="button" data-v="tr" aria-label="Top right">↗</button>
-        <button type="button" data-v="bl" aria-label="Bottom left">↙</button><button type="button" data-v="br" aria-label="Bottom right">↘</button>
+    <section class="sec">
+      <div class="sec-head"><h2>Logo</h2></div>
+      <div class="logo-row">
+        <div class="corners" id="corners" role="group" aria-label="Logo corner">
+          <button type="button" data-v="tl" aria-label="Top left"></button><button type="button" data-v="tr" aria-label="Top right"></button>
+          <button type="button" data-v="bl" aria-label="Bottom left"></button><button type="button" data-v="br" aria-label="Bottom right"></button>
+        </div>
+        <p class="note">Locked 80px from the corner. The headline moves out of its way.</p>
       </div>
-      <p class="hint">The logo and text always sit 80px from the edges. If they share a corner, the text moves out of the logo’s way.</p>
-    </fieldset>
+    </section>
 
-    <fieldset>
-      <legend>4. Background</legend>
+    <section class="sec">
+      <div class="sec-head"><h2>Background</h2></div>
       <div class="seg" id="bgMode">
         <button type="button" data-v="photo">Full photo</button><button type="button" data-v="blur">Blurred backdrop</button>
       </div>
       <div id="blurControls" hidden>
-        <div class="row"><label for="insetH">Photo height</label><input type="range" id="insetH" min="30" max="90" value="55"><output for="insetH"></output></div>
-        <div class="row"><label for="insetM">Side margin</label><input type="range" id="insetM" min="0" max="80" value="0"><output for="insetM"></output></div>
+        <div class="prop"><label for="insetH">Photo height</label><input type="range" id="insetH" min="30" max="90" value="55"><output class="val" for="insetH"></output></div>
+        <div class="prop"><label for="insetM">Side margin</label><input type="range" id="insetM" min="0" max="80" value="0"><output class="val" for="insetM"></output></div>
       </div>
-      <div class="label" style="margin-top: 8px">Gradient</div>
-      <div class="row"><label for="gDir">Direction</label><select id="gDir">
-        <option value="none">No gradient</option><option value="bottom">From bottom</option><option value="top">From top</option>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><h2>Gradient</h2></div>
+      <div class="prop wide"><label for="gDir">Direction</label><select id="gDir">
+        <option value="none">None</option><option value="bottom">From bottom</option><option value="top">From top</option>
         <option value="left">From left</option><option value="right">From right</option><option value="even">Even tint</option>
       </select></div>
       <div id="gradControls">
-        <div class="row"><label for="gDark">Darkness</label><input type="range" id="gDark" min="0" max="100" value="85"><output for="gDark"></output></div>
-        <div class="row"><label for="gReach">Reach</label><input type="range" id="gReach" min="20" max="100" value="70"><output for="gReach"></output></div>
-        <div class="row"><label for="gSteps">Smoothness</label><input type="range" id="gSteps" min="2" max="24" value="16"><output for="gSteps"></output></div>
-        <p class="hint">Smoothness is the number of eased color stops, like the Figma gradient: 2 is a straight fade, 16 matches the template.</p>
+        <div class="prop"><label for="gDark">Darkness</label><input type="range" id="gDark" min="0" max="100" value="85"><output class="val" for="gDark"></output></div>
+        <div class="prop"><label for="gReach">Reach</label><input type="range" id="gReach" min="20" max="100" value="70"><output class="val" for="gReach"></output></div>
+        <div class="prop"><label for="gSteps">Smoothness</label><input type="range" id="gSteps" min="2" max="24" value="16"><output class="val" for="gSteps"></output></div>
+        <p class="note">Smoothness is the number of eased stops: 2 is a straight fade, 16 matches the Figma template.</p>
       </div>
-    </fieldset>
-
-    <fieldset>
-      <legend>5. Save</legend>
-      <div class="actions">
-        <button type="button" class="primary" id="download">Download PNG</button>
-        <button type="button" id="copy">Copy image</button>
-      </div>
-      <p class="hint" id="saveMsg">Saves at 1080 × 1350, Instagram’s portrait size.</p>
-    </fieldset>
-  </div>
-</div>
-
+    </section>
+  </aside>
+</main>
 <script>
 // Frame spec from the Figma "Bottom" template: 1080×1350, 80px margins, 64px logo, Kepler 72/120%.
 const W = 1080, H = 1350, M = 80, LOGO = 64, LOGO_GAP = 40, FULL_W = 920, NARROW_W = 600;
@@ -197,12 +154,25 @@ const PRESETS = [
 ];
 
 const $ = (id) => document.getElementById(id);
+// Fill the slider track up to the thumb (WebKit has no progress pseudo-element).
+function paintRanges() {
+  for (const r of document.querySelectorAll('input[type=range]'))
+    r.style.setProperty('--p', ((r.value - r.min) / (r.max - r.min)) * 100 + '%');
+}
+function setThumb(src) { const t = $('thumb'); t.style.backgroundImage = `url("${src}")`; t.textContent = ''; }
+function setFontStatus(ok) {
+  const el = $('fontStatus');
+  el.dataset.ok = ok;
+  el.textContent = ok ? 'Kepler Std' : 'Substitute font';
+  el.title = ok ? 'Kepler Std is active on this computer.' : 'Kepler Std isn’t installed here, so Newsreader stands in. Activate Kepler Std in Adobe Fonts for an exact match.';
+}
+
 const canvas = $('card'), ctx = canvas.getContext('2d');
 const titleEl = $('title');
 const state = { preset: PRESETS[0], logo: 'tl', align: 'left', color: '#fff', bg: 'photo' };
 let photo = null, focus = { x: 0.5, y: 0.4 }, geo = null;
 
-// --- NGN badge: the lettermark pieces (from badge-ngn.svg) placed in a 2×2 grid inside a 64px circle, per the Figma frame.
+// NGN badge: the lettermark pieces (from badge-ngn.svg) placed in a 2×2 grid inside a 64px circle, per the Figma frame.
 const P = {
   n1: new Path2D('M0,73.07V1.06H12.99L52.81,50.48V1.06h14.32V73.07h-13.2L14.32,24.18v48.89H0Z'),
   g: new Path2D('M78.46,37.06C78.46,16.01,94.36,0,115.41,0c12.46,0,23.97,5.94,31.55,16.91l-11.29,8.06c-5.62-8.48-12.94-11.72-20.26-11.72-13.1,0-22.27,9.86-22.27,23.81s9.54,23.81,22.64,23.81c11.98,0,18.72-7.05,20.36-14.69h-21.79v-12.35h36.27c.21,1.86,.26,3.98,.26,5.78,0,18.51-13.04,34.52-35.1,34.52s-37.33-16.01-37.33-37.06Z'),
@@ -229,7 +199,7 @@ function drawLogo(x, y) {
   ctx.restore();
 }
 
-// --- rich text -> runs -> wrapped lines (same approach as the quote card) ----------
+// rich text -> runs -> wrapped lines (same approach as the quote card)
 // ponytail: copied from index.html rather than shared; extract a shared.js if a third tool appears.
 function runsFrom(el) {
   const runs = [];
@@ -288,7 +258,7 @@ function layout(runs, size, maxW) {
   return { lines, space };
 }
 
-// --- geometry ----------------------------------------------------------------
+// geometry
 function logoBox() {
   return { x: state.logo[1] === 'l' ? M : W - M - LOGO, y: state.logo[0] === 't' ? M : H - M - LOGO };
 }
@@ -308,7 +278,7 @@ function textBox() {
   return { x, y, w, h, lh, size, block, fits: y >= top - 0.5 && y + h <= bottom + 0.5 };
 }
 
-// --- drawing -----------------------------------------------------------------
+// drawing
 const clampRange = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 // Cover-fit the photo into a rect, centered on the focal point, honoring zoom.
@@ -413,9 +383,10 @@ function draw() {
   $('blurControls').hidden = state.bg !== 'blur';
   $('gradControls').hidden = $('gDir').value === 'none';
   syncPressed();
+  paintRanges();
 }
 
-// --- controls ----------------------------------------------------------------
+// controls
 function syncPressed() {
   for (const [id, val] of [['align', state.align], ['color', state.color], ['bgMode', state.bg], ['corners', state.logo]])
     for (const b of $(id).querySelectorAll('button')) b.setAttribute('aria-pressed', b.dataset.v === val);
@@ -435,7 +406,7 @@ for (const p of PRESETS) {
   const tw = p.w === 'full' ? 85 : 55, tx = p.h === 'left' ? 7.5 : p.h === 'right' ? 92.5 - tw : (100 - tw) / 2;
   const ty = p.v === 'top' ? 'top: 8%' : p.v === 'bottom' ? 'bottom: 8%' : 'top: 42%';
   const lx = p.logo[1] === 'l' ? 'left: 7%' : 'right: 7%', ly = p.logo[0] === 't' ? 'top: 6%' : 'bottom: 6%';
-  btn.innerHTML = `<span class="mini"><i style="left:${tx}%;width:${tw}%;${ty}"></i><b style="${lx};${ly}"></b></span>${p.name}`;
+  btn.innerHTML = `<span class="mini"><i style="left:${tx}%;width:${tw}%;${ty}"></i><b style="${lx};${ly}"></b></span><span>${p.name}</span>`;
   btn.addEventListener('click', () => applyPreset(p));
   $('presets').append(btn);
 }
@@ -465,19 +436,19 @@ $('fit').addEventListener('click', () => {
   draw();
 });
 
-// --- photo input -----------------------------------------------------------------
+// photo input
 function setPhoto(src, cors) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     if (cors) img.crossOrigin = 'anonymous'; // keeps the canvas exportable; the NGN media host allows it
-    img.onload = () => { photo = img; $('zoom').value = 100; focus = { x: 0.5, y: 0.4 }; draw(); resolve(); };
+    img.onload = () => { setThumb(src); photo = img; $('zoom').value = 100; focus = { x: 0.5, y: 0.4 }; draw(); resolve(); };
     img.onerror = reject;
     img.src = src;
   });
 }
 function loadPhoto(file) {
   if (!file || !file.type.startsWith('image/')) return;
-  setPhoto(URL.createObjectURL(file)).catch(() => { $('saveMsg').textContent = 'That file could not be opened as an image. Try a JPG, PNG or WebP.'; });
+  setPhoto(URL.createObjectURL(file)).catch(() => say('That file couldn’t be opened as an image. Try a JPG, PNG or WebP.'));
 }
 
 // Story link -> headline + featured image through the site's public REST API (stories are the `newspost` type).
@@ -551,9 +522,9 @@ canvas.addEventListener('pointerup', (e) => {
   dragFrom = null;
 });
 
-// --- save ------------------------------------------------------------------------
+// save
 const pngBlob = () => new Promise((res) => canvas.toBlob(res, 'image/png'));
-const say = (t) => { $('saveMsg').textContent = t; };
+function say(t) { $('saveMsg').textContent = t; clearTimeout(say.timer); say.timer = setTimeout(() => { $('saveMsg').textContent = ''; }, 4000); }
 $('download').addEventListener('click', async () => {
   draw();
   const a = document.createElement('a');
@@ -571,12 +542,10 @@ $('copy').addEventListener('click', () => {
   } catch { say('Right-click the post and choose "Copy Image".'); }
 });
 
-// --- fonts -----------------------------------------------------------------------
+// fonts
 document.fonts.load(`40px ${FAMILY}`).then((faces) => {
   const kepler = faces.some((f) => f.family.includes('QC Kepler') && f.status === 'loaded');
-  $('fontStatus').textContent = kepler
-    ? 'Using Kepler Std, the house typeface.'
-    : 'Kepler Std isn’t installed on this computer, so a close substitute is shown. Activate Kepler Std in Adobe Fonts for an exact match.';
+  setFontStatus(kepler);
 }, () => {});
 
 applyPreset(PRESETS[0]);

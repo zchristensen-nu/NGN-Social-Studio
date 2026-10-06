@@ -6,7 +6,8 @@
 <title>Weekend Quote Card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,72,400;0,72,700;1,72,400;1,72,700&family=Public+Sans:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,72,400;0,72,700;1,72,400;1,72,700&display=swap">
+<link rel="stylesheet" href="studio.css">
 <style>
 /* Kepler Std (Adobe) is used when installed; local() pins exact faces, since the family has 100+ widths and optical sizes. */
 @font-face { font-family: "QC Kepler Display"; font-weight: 400; font-style: normal; src: local("Kepler Std Display"), local("KeplerStd-Disp"); }
@@ -17,129 +18,62 @@
 @font-face { font-family: "QC Kepler Text"; font-weight: 400; font-style: italic; src: local("Kepler Std Italic"), local("KeplerStd-Italic"); }
 @font-face { font-family: "QC Kepler Text"; font-weight: 700; font-style: normal; src: local("Kepler Std Bold"), local("KeplerStd-Bold"); }
 @font-face { font-family: "QC Kepler Text"; font-weight: 700; font-style: italic; src: local("Kepler Std Bold Italic"), local("KeplerStd-BoldIt"); }
-/* Layout: card preview is the hero on the left, a narrow control column on the right; stacks on phones. */
-:root {
-  --bg: #f3f3f1;
-  --panel: #ffffff;
-  --fg: #1c1c1e;
-  --muted: #66666b;
-  --line: #dcdcd8;
-  --accent: #c8102e;
-  --accent-fg: #ffffff;
-  --warn-bg: #fdecef;
-  --warn-fg: #8a0c20;
-  --ui: "Public Sans", system-ui, sans-serif;
-  --serif: "QC Kepler Text", "Newsreader", Georgia, serif;
-}
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #151517; --panel: #1f1f22; --fg: #ededee; --muted: #a0a0a6; --line: #343438;
-  --accent: #ef3a52; --accent-fg: #ffffff; --warn-bg: #3a1419; --warn-fg: #ffb3bd; color-scheme: dark;
-} }
-:root[data-theme="dark"] {
-  --bg: #151517; --panel: #1f1f22; --fg: #ededee; --muted: #a0a0a6; --line: #343438;
-  --accent: #ef3a52; --accent-fg: #ffffff; --warn-bg: #3a1419; --warn-fg: #ffb3bd; color-scheme: dark;
-}
-* { box-sizing: border-box; }
-[hidden] { display: none !important; }
-body { background: var(--bg); color: var(--fg); font: 15px/1.45 var(--ui); padding: 24px 16px; }
-.app { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
-@media (max-width: 900px) { .app { grid-template-columns: minmax(0, 1fr); } }
-header { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
-h1 { font: 400 30px/1.1 var(--serif); margin: 0; text-wrap: balance; }
-header p { margin: 0; color: var(--muted); }
-header nav { margin-left: auto; display: flex; gap: 12px; font-size: 14px; }
-header nav a { color: var(--muted); }
-header nav a[aria-current] { color: var(--fg); font-weight: 600; text-decoration: none; }
-.stage { display: grid; gap: 12px; min-width: 0; position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); }
-@media (max-width: 900px) { .stage { position: static; } }
-canvas { width: 100%; max-width: 100%; height: auto; display: block; box-shadow: 0 1px 3px rgb(0 0 0 / .15); background: #000; }
-canvas { cursor: crosshair; touch-action: none; }
-.stage.drag canvas { outline: 3px dashed var(--accent); outline-offset: 4px; }
-.status { font-size: 13px; color: var(--muted); }
-.warn { background: var(--warn-bg); color: var(--warn-fg); padding: 8px 12px; border-radius: 6px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: grid; gap: 22px; min-width: 0; }
-fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; min-width: 0; }
-legend, .label { font-weight: 600; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0; margin-bottom: 8px; }
-.hint { font-size: 13px; color: var(--muted); margin: 0; }
-.editor { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; min-height: 5.5em; font: 400 17px/1.4 var(--serif); background: var(--bg); outline: none; overflow-wrap: anywhere; }
-.editor:focus { border-color: var(--accent); }
-.editor b, .editor strong { font-weight: 700; }
-.toolbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-button, .filebtn { font: 600 14px var(--ui); border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 6px; padding: 7px 12px; cursor: pointer; }
-button:hover, .filebtn:hover { border-color: var(--fg); }
-button:focus-visible, .filebtn:focus-within, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.fmt { width: 36px; padding: 6px 0; font-family: var(--serif); font-size: 17px; }
-.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
-.primary:hover { border-color: var(--fg); }
-.filebtn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.row { display: grid; grid-template-columns: 88px minmax(0, 1fr) 44px; gap: 10px; align-items: center; font-size: 14px; }
-.row output { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
-input[type=range] { width: 100%; accent-color: var(--accent); }
-.actions { display: flex; gap: 8px; flex-wrap: wrap; }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
-
-<div class="app">
-  <header>
-    <h1>Weekend Quote Card</h1>
-    <p>Add a photo, type the quote and who said it, then download the image.</p>
-    <nav><a href="./" aria-current="page">Quote card</a><a href="social.html">Social post</a></nav>
-  </header>
-
-  <div class="stage" id="stage">
-    <canvas id="card" width="2196" height="1420" aria-label="Quote card preview"></canvas>
-    <div class="warn" id="warn" hidden>
-      <span>The text is too long to fit the card.</span>
-      <button type="button" id="fit">Shrink text to fit</button>
+<header class="topbar">
+  <div class="brand"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#000"/><path d="M0,73.07V1.06H12.99L52.81,50.48V1.06h14.32V73.07h-13.2L14.32,24.18v48.89H0Z" fill="#fff" transform="translate(15.3 15.18) scale(0.21955) translate(0 -1.06)"/><path d="M240.67 1.01L240.67 8.21L264.23 8.21L243.23 29.21L248.32 34.31L269.5 13.12L269.5 37.04L276.7 37.04L276.7 1.01Z" fill="#cf2b28" transform="translate(32.49 15.18) scale(0.43880) translate(-240.67 -1.01)"/><path d="M78.46,37.06C78.46,16.01,94.36,0,115.41,0c12.46,0,23.97,5.94,31.55,16.91l-11.29,8.06c-5.62-8.48-12.94-11.72-20.26-11.72-13.1,0-22.27,9.86-22.27,23.81s9.54,23.81,22.64,23.81c11.98,0,18.72-7.05,20.36-14.69h-21.79v-12.35h36.27c.21,1.86,.26,3.98,.26,5.78,0,18.51-13.04,34.52-35.1,34.52s-37.33-16.01-37.33-37.06Z" fill="#fff" transform="translate(14.3 32.78) scale(0.22393) translate(-78.46 0)"/><path d="M162.22,73.07V1.06h12.99l39.82,49.42V1.06h14.32V73.07h-13.2l-39.61-48.89v48.89h-14.32Z" fill="#fff" transform="translate(33.57 33.34) scale(0.21955) translate(-162.22 -1.06)"/></svg><span>Studio</span></div>
+  <nav class="tabs" aria-label="Tools"><a href="./" aria-current="page"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/><path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/></svg>Quote card</a><a href="social.html"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 17h8M8 14h5"/></svg>Social post</a></nav>
+  <div class="top-actions">
+    <span class="font-chip" id="fontStatus"></span>
+    <button type="button" class="btn outline" id="copy"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>
+    <button type="button" class="btn primary" id="download"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg>Export PNG</button>
+  </div>
+</header>
+<main class="workspace">
+  <section class="stage" id="stage" aria-label="Canvas">
+    <div class="artboard">
+      <div class="frame-label"><span>Weekend quote</span><span>1098 × 710 · exports at 2×</span></div>
+      <canvas id="card" width="2196" height="1420" aria-label="Quote card preview"></canvas>
     </div>
-    <div class="status" id="fontStatus"></div>
-  </div>
+    <div class="toasts">
+      <div class="toast" id="warn" hidden><span class="dot"></span><span>Text runs past the card’s margins</span><button type="button" id="fit">Shrink to fit</button></div>
+      <div class="toast plain" id="saveMsg" role="status"></div>
+    </div>
+  </section>
 
-  <div class="panel">
-    <fieldset>
-      <legend>1. Photo</legend>
-      <div class="toolbar">
-        <label class="filebtn">Choose photo…<input type="file" id="file" accept="image/*"></label>
-      </div>
-      <p class="hint">Or paste a photo (⌘V) or drag one onto the card.</p>
-      <p class="hint"><strong>Click the face</strong> in the photo to center on it, or drag the photo to fine-tune.</p>
-      <div class="row"><label for="zoom">Zoom</label><input type="range" id="zoom" min="100" max="250" value="100"><output for="zoom" id="zoomOut">100%</output></div>
-    </fieldset>
+  <aside class="panel right" aria-label="Properties">
+    <section class="sec">
+      <div class="sec-head"><h2>Photo</h2></div>
+      <label class="drop">
+        <span class="thumb" id="thumb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></span>
+        <span><strong>Choose or drop a photo</strong><span class="sub">Or paste with ⌘V. Click the photo on the canvas to set the focus point.</span></span>
+        <input type="file" id="file" accept="image/*">
+      </label>
+      <div class="prop"><label for="zoom">Zoom</label><input type="range" id="zoom" min="100" max="250" value="100"><output class="val" for="zoom" id="zoomOut"></output></div>
+    </section>
 
-    <fieldset>
-      <legend>2. Text</legend>
-      <div class="toolbar">
-        <button type="button" class="fmt" data-cmd="bold" title="Bold (⌘B)" aria-label="Bold"><b>B</b></button>
-        <button type="button" class="fmt" data-cmd="italic" title="Italic (⌘I)" aria-label="Italic"><i>I</i></button>
-        <span class="hint">Select words, then click B or I.</span>
-      </div>
-      <div class="label" id="quoteLabel">Quote</div>
+    <section class="sec">
+      <div class="sec-head"><h2 id="quoteLabel">Quote</h2><div class="toolbar"><button type="button" class="btn icon fmt" data-cmd="bold" title="Bold (⌘B)" aria-label="Bold"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg></button>
+          <button type="button" class="btn icon fmt" data-cmd="italic" title="Italic (⌘I)" aria-label="Italic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4h-9M14 20H5M15 4 9 20"/></svg></button></div></div>
       <div class="editor" id="quote" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="quoteLabel">Lethal execution is sometimes touted as a more humane method than, say, electrocution, but nothing about [Wednesday's] events strikes me as remotely humane.</div>
-      <p class="hint">Quotation marks and the dash are added for you.</p>
-      <div class="label" id="attrLabel">Who said it</div>
+      <p class="note">Curly quotation marks are added for you.</p>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head"><h2 id="attrLabel">Attribution</h2><div class="toolbar"><button type="button" class="btn icon fmt" data-cmd="bold" title="Bold (⌘B)" aria-label="Bold"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg></button>
+          <button type="button" class="btn icon fmt" data-cmd="italic" title="Italic (⌘I)" aria-label="Italic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4h-9M14 20H5M15 4 9 20"/></svg></button></div></div>
       <div class="editor" id="attr" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="attrLabel"><i>Daniel Medwed,</i> a Northeastern University distinguished professor of law, referring to the Sept. 30 botched execution of <b>death row</b> inmate Christa Pike in Tennessee.</div>
-    </fieldset>
+      <p class="note">The leading dash is added for you.</p>
+    </section>
 
-    <fieldset>
-      <legend>3. Text size</legend>
-      <div class="row"><label for="qSize">Quote</label><input type="range" id="qSize" min="24" max="56" value="40"><output for="qSize"></output></div>
-      <div class="row"><label for="aSize">Who said it</label><input type="range" id="aSize" min="16" max="34" value="26"><output for="aSize"></output></div>
-      <div><button type="button" id="resetSize">Reset sizes</button></div>
-    </fieldset>
-
-    <fieldset>
-      <legend>4. Save</legend>
-      <div class="actions">
-        <button type="button" class="primary" id="download">Download PNG</button>
-        <button type="button" id="copy">Copy image</button>
-      </div>
-      <p class="hint" id="saveMsg">Saves at 2× (2196 × 1420) for sharp social posts.</p>
-    </fieldset>
-  </div>
-</div>
-
+    <section class="sec">
+      <div class="sec-head"><h2>Text size</h2><button type="button" class="btn icon" id="resetSize" title="Reset to 40 / 26" aria-label="Reset sizes"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button></div>
+      <div class="prop"><label for="qSize">Quote</label><input type="range" id="qSize" min="24" max="56" value="40"><output class="val" for="qSize"></output></div>
+      <div class="prop"><label for="aSize">Attribution</label><input type="range" id="aSize" min="16" max="34" value="26"><output class="val" for="aSize"></output></div>
+    </section>
+  </aside>
+</main>
 <script>
 // Card spec from the Figma frame: 1098×710, portrait 518 wide, black quote column with 110/48 padding, 33 gap.
 const W = 1098, H = 710, PW = 518, PAD_X = 48, PAD_Y = 110, GAP = 33, SCALE = 2;
@@ -148,6 +82,19 @@ const ATTR_FAMILY = '"QC Kepler Text", "Newsreader", Georgia, serif';
 const DEFAULTS = { qSize: 40, aSize: 26 };
 
 const $ = (id) => document.getElementById(id);
+// Fill the slider track up to the thumb (WebKit has no progress pseudo-element).
+function paintRanges() {
+  for (const r of document.querySelectorAll('input[type=range]'))
+    r.style.setProperty('--p', ((r.value - r.min) / (r.max - r.min)) * 100 + '%');
+}
+function setThumb(src) { const t = $('thumb'); t.style.backgroundImage = `url("${src}")`; t.textContent = ''; }
+function setFontStatus(ok) {
+  const el = $('fontStatus');
+  el.dataset.ok = ok;
+  el.textContent = ok ? 'Kepler Std' : 'Substitute font';
+  el.title = ok ? 'Kepler Std is active on this computer.' : 'Kepler Std isn’t installed here, so Newsreader stands in. Activate Kepler Std in Adobe Fonts for an exact match.';
+}
+
 const canvas = $('card'), ctx = canvas.getContext('2d');
 const quoteEl = $('quote'), attrEl = $('attr');
 let photo = null;
@@ -156,7 +103,7 @@ let focus = { x: 0.5, y: 0.4 };
 let geo = null;
 let lastEditor = quoteEl;
 
-// --- rich text -> runs ---------------------------------------------------
+// rich text -> runs
 function runsFrom(el) {
   const runs = [];
   (function walk(node, b, i) {
@@ -211,7 +158,7 @@ function attrRuns() {
   return runs;
 }
 
-// --- layout ----------------------------------------------------------------
+// layout
 const fontFor = (r, size, family) => `${r.i ? 'italic ' : ''}${r.b ? 700 : 400} ${size}px ${family}`;
 
 // Greedy word wrap; a "word" can mix styles (e.g. italic name + roman comma) and only breaks at whitespace.
@@ -303,9 +250,10 @@ function draw() {
   $('warn').hidden = m.total <= H - PAD_Y * 2;
   for (const id of ['qSize', 'aSize']) document.querySelector(`output[for=${id}]`).textContent = $(id).value + 'px';
   $('zoomOut').textContent = $('zoom').value + '%';
+  paintRanges();
 }
 
-// --- inputs ----------------------------------------------------------------
+// inputs
 function loadPhoto(file) {
   if (!file || !file.type.startsWith('image/')) return;
   const img = new Image();
@@ -314,8 +262,9 @@ function loadPhoto(file) {
     $('zoom').value = 100; focus = { x: 0.5, y: 0.4 };
     draw();
   };
-  img.onerror = () => { $('saveMsg').textContent = 'That file could not be opened as an image. Try a JPG, PNG or WebP.'; };
+  img.onerror = () => say('That file couldn’t be opened as an image. Try a JPG, PNG or WebP.');
   img.src = URL.createObjectURL(file);
+  setThumb(img.src);
 }
 
 $('file').addEventListener('change', (e) => loadPhoto(e.target.files[0]));
@@ -398,10 +347,10 @@ $('fit').addEventListener('click', () => {
   draw();
 });
 
-// --- save ------------------------------------------------------------------
+// save
 const pngBlob = () => new Promise((res) => canvas.toBlob(res, 'image/png'));
 const fileName = () => `weekend-quote-${new Date().toISOString().slice(0, 10)}.png`;
-const say = (t) => { $('saveMsg').textContent = t; };
+function say(t) { $('saveMsg').textContent = t; clearTimeout(say.timer); say.timer = setTimeout(() => { $('saveMsg').textContent = ''; }, 4000); }
 const FALLBACK = 'Right-click the card and choose "Save Image As…" or "Copy Image".';
 
 $('download').addEventListener('click', async () => {
@@ -433,12 +382,10 @@ $('copy').addEventListener('click', () => {
   } catch { say(FALLBACK); }
 });
 
-// --- fonts -----------------------------------------------------------------
+// fonts
 document.fonts.load('40px "QC Kepler Display"').then((faces) => {
   const kepler = faces.some((f) => f.status === 'loaded');
-  $('fontStatus').textContent = kepler
-    ? 'Using Kepler Std, the house typeface.'
-    : 'Kepler Std isn\u2019t installed on this computer, so a close substitute is shown. Activate Kepler Std in Adobe Fonts for an exact match.';
+  setFontStatus(kepler);
 }, () => {});
 
 draw();
