@@ -4,12 +4,13 @@
 //
 // attach({ canvas, wrap, root, W, regions, redraw }): canvas and wrap may be functions when the active artboard
 // changes; root (default: the canvas) receives the pointer listeners, which only act on the active canvas.
-// Region: { editor, x, y, w, h, size, lh, family, color, align }
+// Region: { editor, x, y, w, h, size, lh, family, color, align }, plus optionally { box: { x, w }, anchor, min, max,
+// onResize(w) } for a resizable wrap width: handles on the box edges set it, growing away from the anchored side.
 // The page's draw() skips the block whose editor === CanvasEdit.editing, and must not redraw from inside
 // a region lookup. Width is the drawn block's widest line, so the browser's greedy wrap reproduces the
 // canvas lines exactly (balanced lines all fit inside it, and nothing extra does).
 window.CanvasEdit = (() => {
-  let opts, box = null, hover, current = null;
+  let opts, box = null, hover, current = null, frame = null;
 
   const cv = () => (typeof opts.canvas === 'function' ? opts.canvas() : opts.canvas);
   const wrap = () => (typeof opts.wrap === 'function' ? opts.wrap() : opts.wrap);
@@ -38,6 +39,36 @@ window.CanvasEdit = (() => {
     box.style.font = `400 ${r.size * s}px/${r.lh * s}px ${r.family}`;
     box.style.color = r.color;
     box.style.textAlign = r.align || 'left';
+    if (frame) cover(frame, { ...r, x: r.box.x, w: r.box.w });
+  }
+
+  // Wrap-width handles: only the edges that can move given the anchor (a left-anchored block grows to the right).
+  function addFrame(r) {
+    frame = document.createElement('div');
+    frame.className = 'wrap-frame';
+    const sides = r.anchor === 'left' ? ['right'] : r.anchor === 'right' ? ['left'] : ['left', 'right'];
+    for (const side of sides) {
+      const h = document.createElement('div');
+      h.className = `wrap-handle ${side}`;
+      h.title = 'Drag to change the text width';
+      // Keep focus in the editor: pressing a non-editable element would otherwise blur it and end editing.
+      h.addEventListener('mousedown', (e) => e.preventDefault());
+      h.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        h.setPointerCapture(e.pointerId);
+        const r0 = opts.regions().find((x) => x.editor === current), x0 = e.clientX, w0 = r0.box.w;
+        const k = (side === 'right' ? 1 : -1) * (r0.anchor === 'center' ? 2 : 1);
+        const move = (ev) => {
+          const w = Math.round(Math.min(r0.max, Math.max(r0.min, w0 + (k * (ev.clientX - x0)) / scale())));
+          r0.onResize(w); opts.redraw(); place();
+        };
+        const up = () => { h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', up); box?.focus(); };
+        h.addEventListener('pointermove', move);
+        h.addEventListener('pointerup', up);
+      });
+      frame.append(h);
+    }
+    wrap().append(frame);
   }
 
   function start(r) {
@@ -49,6 +80,7 @@ window.CanvasEdit = (() => {
     box.spellcheck = false;
     box.innerHTML = r.editor.innerHTML;
     wrap().append(box);
+    if (r.onResize) addFrame(r);
     opts.redraw();
     place();
     box.focus();
@@ -64,6 +96,7 @@ window.CanvasEdit = (() => {
     if (!box) return;
     box.removeEventListener('blur', stop);
     box.remove(); box = null; current = null;
+    frame?.remove(); frame = null;
     opts.redraw();
   }
 

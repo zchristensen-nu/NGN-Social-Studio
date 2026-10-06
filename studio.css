@@ -221,6 +221,15 @@ select:hover { border-color: var(--line); }
 .canvas-editor b, .canvas-editor strong { font-weight: 700; }
 .canvas-editor::selection, .canvas-editor *::selection { background: rgb(13 153 255 / .35); }
 
+/* Wrap-width frame while editing: the dashed box is the headline's wrap width; square handles resize it */
+.wrap-frame { position: absolute; pointer-events: none; outline: 1px dashed rgb(13 153 255 / .7); outline-offset: 6px; }
+.wrap-handle {
+  position: absolute; top: 50%; width: 10px; height: 10px; margin-top: -5px; pointer-events: all; cursor: ew-resize;
+  background: #fff; border: 1.5px solid var(--sel); border-radius: 2px; box-shadow: 0 1px 2px rgb(0 0 0 / .3);
+}
+.wrap-handle.left { left: -11px; }
+.wrap-handle.right { right: -11px; }
+
 /* Several artboards side by side; the selected one carries Figma's selection outline */
 .boards { display: flex; gap: 56px; align-items: flex-start; margin: auto; }
 .boards .artboard { flex: none; }
