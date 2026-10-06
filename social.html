@@ -38,10 +38,12 @@
 .corners [data-v=tl] { top: 3px; left: 3px; } .corners [data-v=tr] { top: 3px; right: 3px; }
 .corners [data-v=bl] { bottom: 3px; left: 3px; } .corners [data-v=br] { bottom: 3px; right: 3px; }
 .logo-row { display: flex; gap: 12px; align-items: center; }
-#storyForm { display: flex; gap: 4px; }
+#storyForm { display: grid; gap: 6px; }
+#storyUrl { resize: vertical; min-height: 64px; font-size: 12px; line-height: 17px; }
 #gOn { width: 96px; }
 /* Gradient handles: an overlay on the artboard, never part of the export. Shown while hovering the post. */
 .art-wrap { position: relative; }
+#boards > #gradUi, .stage > #gradUi { display: none; }
 #gradUi { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; opacity: 0; transition: opacity .15s; }
 .art-wrap:hover #gradUi, #gradUi.dragging { opacity: 1; }
 @media (hover: none) { #gradUi { opacity: 1; } }
@@ -58,6 +60,7 @@
   <div class="top-actions">
     <span class="font-chip" id="fontStatus"></span>
     <button type="button" class="btn outline" id="copy"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>
+    <button type="button" class="btn outline" id="downloadAll" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg><span>Export all</span></button>
     <button type="button" class="btn primary" id="download"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg>Export PNG</button>
   </div>
 </header>
@@ -68,15 +71,12 @@
   </aside>
 
   <section class="stage" id="stage" aria-label="Canvas">
-    <div class="artboard">
-      <div class="frame-label"><span>Instagram post</span><span>1080 × 1350</span></div>
-      <div class="art-wrap">
-        <canvas id="card" width="1080" height="1350" aria-label="Post preview"></canvas>
-        <svg id="gradUi" viewBox="0 0 1080 1350" aria-hidden="true">
-          <line id="gLine"/><circle id="gStart" class="handle" r="16"/><circle id="gEnd" class="handle" r="16"/>
-        </svg>
-      </div>
+    <div class="boards" id="boards">
+      <button type="button" class="add-board" id="addBoard"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New post</button>
     </div>
+    <svg id="gradUi" viewBox="0 0 1080 1350" aria-hidden="true">
+      <line id="gLine"/><circle id="gStart" class="handle" r="16"/><circle id="gEnd" class="handle" r="16"/>
+    </svg>
     <div class="toasts">
       <div class="toast" id="warn" hidden><span class="dot"></span><span>Headline is too long for this layout. Shorten it or pick a full-width layout.</span></div>
       <div class="toast plain" id="saveMsg" role="status"></div>
@@ -87,10 +87,10 @@
     <section class="sec">
       <div class="sec-head"><h2>Import from story</h2></div>
       <form id="storyForm">
-        <span class="input-icon"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><input class="field" type="url" id="storyUrl" placeholder="news.northeastern.edu/…" aria-label="Story link" required></span>
-        <button type="submit" class="btn icon outline" aria-label="Load story"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+        <textarea class="field" id="storyUrl" rows="3" placeholder="Paste story links, one per line" aria-label="Story links" required></textarea>
+        <button type="submit" class="btn outline"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Import</button>
       </form>
-      <p class="note" id="storyMsg">Brings in the headline and featured image.</p>
+      <p class="note" id="storyMsg">Brings in each story’s headline and featured image. Several links make several posts.</p>
     </section>
 
     <section class="sec">
@@ -148,6 +148,8 @@
     </section>
   </aside>
 </main>
+<script src="canvas-edit.js"></script>
+<script src="tour.js"></script>
 <script>
 // Frame spec from the Figma "Bottom" template: 1080×1350, 80px margins, 64px logo, Kepler 72/120%.
 const W = 1080, H = 1350, M = 80, LOGO = 64, LOGO_GAP = 40, FULL_W = 920, NARROW_W = 600;
@@ -175,7 +177,6 @@ function paintRanges() {
   for (const r of document.querySelectorAll('input[type=range]'))
     r.style.setProperty('--p', ((r.value - r.min) / (r.max - r.min)) * 100 + '%');
 }
-function setThumb(src) { const t = $('thumb'); t.style.backgroundImage = `url("${src}")`; t.textContent = ''; }
 function setFontStatus(ok) {
   const el = $('fontStatus');
   el.dataset.ok = ok;
@@ -183,7 +184,8 @@ function setFontStatus(ok) {
   el.title = ok ? 'Kepler Std is active on this computer.' : 'Kepler Std isn’t installed here, so Newsreader stands in. Activate Kepler Std in Adobe Fonts for an exact match.';
 }
 
-const canvas = $('card'), ctx = canvas.getContext('2d');
+let canvas, ctx; // the selected artboard's canvas; see select()
+let regions = [];
 const titleEl = $('title');
 const state = { preset: PRESETS[0], logo: 'tl', align: 'left', color: '#fff', bg: 'photo', gOn: 'on' };
 // Gradient runs from g0 (full darkness) to g1 (clear), in post pixels; the canvas handles move these.
@@ -414,7 +416,9 @@ function draw() {
 
   drawGradient();
 
-  // Headline
+  // Headline (the on-canvas editor draws it while it's being edited)
+  regions = [{ editor: titleEl, x: tb.x, y: tb.y, w: tb.w, h: tb.h, size: SIZE, lh: tb.lh, family: FAMILY, color: state.color, align: state.align }];
+  if (CanvasEdit.editing !== titleEl) {
   ctx.fillStyle = state.color; ctx.textBaseline = 'alphabetic';
   ctx.font = fontFor({}, tb.size);
   const m = ctx.measureText('Hg');
@@ -427,11 +431,13 @@ function draw() {
       for (const seg of word) { ctx.font = seg.font; ctx.fillText(seg.text, cx, y); cx += seg.w; }
     });
   });
+  }
 
   const lb = logoBox();
   drawLogo(lb.x, lb.y);
 
   $('warn').hidden = tb.fits;
+  boards[active].el.querySelector('.name').textContent = titleEl.textContent.trim() || 'Untitled post';
   for (const o of document.querySelectorAll('output[for]')) {
     const id = o.htmlFor.value, unit = '%';
     o.textContent = $(id).value + unit;
@@ -506,26 +512,32 @@ document.querySelectorAll('.fmt').forEach((btn) => {
 });
 
 // photo input
-function setPhoto(src, cors) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    if (cors) img.crossOrigin = 'anonymous'; // keeps the canvas exportable; the NGN media host allows it
-    img.onload = () => { setThumb(src); photo = img; $('zoom').value = 100; focus = { x: 0.5, y: 0.4 }; draw(); resolve(); };
-    img.onerror = reject;
-    img.src = src;
-  });
+const loadImage = (src, cors) => new Promise((resolve, reject) => {
+  const img = new Image();
+  if (cors) img.crossOrigin = 'anonymous'; // keeps the canvas exportable; the NGN media host allows it
+  img.onload = () => resolve(img);
+  img.onerror = reject;
+  img.src = src;
+});
+const THUMB_ICON = $('thumb').innerHTML;
+function showThumb() {
+  const t = $('thumb');
+  if (photo) { t.style.backgroundImage = `url("${photo.src}")`; t.textContent = ''; }
+  else { t.style.backgroundImage = ''; t.innerHTML = THUMB_ICON; }
 }
+function usePhoto(img) { photo = img; $('zoom').value = 100; focus = { x: 0.5, y: 0.4 }; showThumb(); draw(); }
 function loadPhoto(file) {
   if (!file || !file.type.startsWith('image/')) return;
-  setPhoto(URL.createObjectURL(file)).catch(() => say('That file couldn’t be opened as an image. Try a JPG, PNG or WebP.'));
+  loadImage(URL.createObjectURL(file)).then(usePhoto, () => say('That file couldn’t be opened as an image. Try a JPG, PNG or WebP.'));
 }
 
 // Story link -> headline + featured image through the site's public REST API (stories are the `newspost` type).
-async function loadStory(link) {
-  const url = new URL(link);
-  if (!/(^|\.)northeastern\.edu$|\.go-vip\.net$/.test(url.hostname)) throw new Error('Use a news.northeastern.edu story link.');
+async function fetchStory(link) {
+  let url;
+  try { url = new URL(link); } catch { throw new Error('not a link'); }
+  if (!/(^|\.)northeastern\.edu$|\.go-vip\.net$/.test(url.hostname)) throw new Error('not a news.northeastern.edu link');
   const slug = url.pathname.split('/').filter(Boolean).pop();
-  if (!slug) throw new Error('That link doesn’t point to a story.');
+  if (!slug) throw new Error('not a story link');
   let story;
   for (const type of ['newspost', 'posts']) {
     const res = await fetch(`${url.origin}/wp-json/wp/v2/${type}?slug=${encodeURIComponent(slug)}&_embed=wp:featuredmedia&_fields=title,_links,_embedded`);
@@ -533,31 +545,111 @@ async function loadStory(link) {
     [story] = await res.json();
     if (story) break;
   }
-  if (!story) throw new Error('No published story found at that link.');
+  if (!story) throw new Error('no published story found');
   const title = new DOMParser().parseFromString(story.title.rendered, 'text/html').body.textContent;
-  titleEl.textContent = title;
-  draw();
-  const media = story._embedded?.['wp:featuredmedia']?.[0];
-  if (!media?.source_url) return 'Headline loaded. This story has no featured image, so add a photo.';
-  await setPhoto(media.source_url, true).catch(() => { throw new Error('Headline loaded, but the featured image couldn’t be opened. Add the photo yourself.'); });
-  return 'Headline and featured image loaded.';
+  const src = story._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+  const img = src ? await loadImage(src, true).catch(() => null) : null;
+  return { title, img, slug };
 }
+
+$('storyUrl').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('storyForm').requestSubmit(); });
 $('storyForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  $('storyMsg').textContent = 'Loading…';
-  try { $('storyMsg').textContent = await loadStory($('storyUrl').value.trim()); }
-  catch (err) { $('storyMsg').textContent = err instanceof TypeError ? 'Couldn’t reach the site. Check the link and your connection.' : err.message; }
+  const links = $('storyUrl').value.split(/\s+/).filter(Boolean);
+  if (!links.length) return;
+  $('storyMsg').textContent = links.length > 1 ? `Loading ${links.length} stories…` : 'Loading…';
+  const results = await Promise.allSettled(links.map(fetchStory));
+  const ok = results.filter((r) => r.status === 'fulfilled').map((r) => r.value);
+  const failed = results.map((r, i) => (r.status === 'rejected' ? `${links[i].replace(/^https?:\/\/[^/]+/, '')} (${r.reason instanceof TypeError ? 'couldn’t reach the site' : r.reason.message})` : null)).filter(Boolean);
+  if (ok.length) {
+    // One link fills the selected post; several make one post each, reusing the selected post if it's still empty.
+    const base = snapshot();
+    const posts = ok.map((st) => ({ ...base, photo: st.img, focus: { x: 0.5, y: 0.4 }, zoom: 100, title: escapeHtml(st.title), slug: st.slug }));
+    const reuse = ok.length === 1 || !photo;
+    const first = reuse ? active : boards.length;
+    posts.forEach((p, n) => (n === 0 && reuse ? Object.assign(boards[active], p) : addBoard(p)));
+    for (let i = first; i < first + posts.length; i++) select(i, !(i === first && reuse)); // render each new artboard
+    select(first, false);
+    boards[first].el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
+  const noImage = ok.filter((st) => !st.img).length;
+  $('storyMsg').textContent = [
+    ok.length ? `Loaded ${ok.length === 1 ? 'the story' : `${ok.length} stories`}.` : '',
+    noImage ? `${noImage === 1 ? 'One has' : `${noImage} have`} no featured image; add a photo.` : '',
+    failed.length ? `Couldn’t load ${failed.join(', ')}.` : '',
+  ].filter(Boolean).join(' ');
 });
+const escapeHtml = (t) => { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
+
+// Artboards: each post keeps its own settings; the panels edit the selected one.
+const boards = [];
+let active = 0;
+const snapshot = () => ({
+  photo, focus: { ...focus }, zoom: $('zoom').value, title: titleEl.innerHTML, state: { ...state },
+  g0: { ...g0 }, g1: { ...g1 }, gDark: $('gDark').value, insetH: $('insetH').value,
+});
+function addBoard(post) {
+  const el = document.createElement('div');
+  el.className = 'artboard';
+  el.innerHTML = `<div class="frame-label"><span><span class="name"></span></span><span>1080 × 1350
+    <button type="button" class="x" aria-label="Delete post" title="Delete post"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span></div>
+    <div class="art-wrap"><canvas width="1080" height="1350" aria-label="Post preview"></canvas></div>`;
+  $('boards').insertBefore(el, $('addBoard'));
+  const board = { ...post, el, canvas: el.querySelector('canvas') };
+  el.querySelector('.x').addEventListener('click', (e) => { e.stopPropagation(); removeBoard(boards.indexOf(board)); });
+  boards.push(board);
+  return board;
+}
+// save: store the outgoing post's settings first (false when it was just removed or overwritten).
+function select(i, save = true) {
+  CanvasEdit.stop();
+  if (save && boards[active] && i !== active) Object.assign(boards[active], snapshot());
+  active = i;
+  const b = boards[i];
+  canvas = b.canvas; ctx = canvas.getContext('2d');
+  photo = b.photo; focus = { ...b.focus }; $('zoom').value = b.zoom; titleEl.innerHTML = b.title;
+  Object.assign(state, b.state); g0 = { ...b.g0 }; g1 = { ...b.g1 }; $('gDark').value = b.gDark; $('insetH').value = b.insetH;
+  for (const x of boards) x.el.classList.toggle('selected', x === b);
+  canvas.parentNode.append($('gradUi'));
+  $('downloadAll').hidden = boards.length < 2;
+  $('downloadAll').querySelector('span').textContent = `Export all ${boards.length}`;
+  showThumb();
+  draw();
+}
+function removeBoard(i) {
+  if (boards.length === 1) { say('A post needs at least one artboard.'); return; }
+  if (i === active) CanvasEdit.stop();
+  else Object.assign(boards[active], snapshot());
+  const wasActive = i === active;
+  $('stage').append($('gradUi')); // the handle overlay may live in the artboard being removed
+  boards[i].el.remove();
+  boards.splice(i, 1);
+  if (active > i || (wasActive && active >= boards.length)) active = Math.max(0, active - 1);
+  select(active, false);
+}
+$('addBoard').addEventListener('click', () => {
+  const post = { ...snapshot(), photo: null, focus: { x: 0.5, y: 0.4 }, zoom: 100, title: 'Write a headline' };
+  Object.assign(boards[active], snapshot());
+  addBoard(post);
+  select(boards.length - 1, false);
+  boards[active].el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+});
+
 $('file').addEventListener('change', (e) => loadPhoto(e.target.files[0]));
 document.addEventListener('paste', (e) => {
   const file = [...(e.clipboardData?.files || [])].find((f) => f.type.startsWith('image/'));
   if (file) { e.preventDefault(); loadPhoto(file); return; }
-  if (e.target.closest?.('.editor')) { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); }
+  if (e.target.closest?.('[contenteditable]')) { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); }
 });
 const stage = $('stage');
 stage.addEventListener('dragover', (e) => { e.preventDefault(); stage.classList.add('drag'); });
 stage.addEventListener('dragleave', () => stage.classList.remove('drag'));
-stage.addEventListener('drop', (e) => { e.preventDefault(); stage.classList.remove('drag'); loadPhoto(e.dataTransfer.files[0]); });
+stage.addEventListener('drop', (e) => {
+  e.preventDefault(); stage.classList.remove('drag');
+  const i = boards.findIndex((b) => b.el.contains(e.target));
+  if (i >= 0 && i !== active) select(i);
+  loadPhoto(e.dataTransfer.files[0]);
+});
 
 // Click the photo to center on that point; drag to pan.
 function cardPoint(e) {
@@ -566,13 +658,17 @@ function cardPoint(e) {
 }
 const inPhoto = (p) => geo && p.x >= geo.rx && p.x <= geo.rx + geo.rw && p.y >= geo.ry && p.y <= geo.ry + geo.rh;
 let dragFrom = null, moved = false;
-canvas.addEventListener('pointerdown', (e) => {
+stage.addEventListener('pointerdown', (e) => {
+  const i = boards.findIndex((b) => b.el.contains(e.target));
+  if (i < 0) return;
+  if (i !== active) { select(i); return; }
+  if (e.target !== canvas) return;
   const p = cardPoint(e);
-  if (!inPhoto(p)) return;
+  if (!inPhoto(p) || CanvasEdit.hit(p)) return;
   dragFrom = p; moved = false;
   canvas.setPointerCapture(e.pointerId);
 });
-canvas.addEventListener('pointermove', (e) => {
+stage.addEventListener('pointermove', (e) => {
   if (!dragFrom) return;
   const p = cardPoint(e);
   if (!moved && Math.hypot(p.x - dragFrom.x, p.y - dragFrom.y) < 4) return;
@@ -582,7 +678,7 @@ canvas.addEventListener('pointermove', (e) => {
   draw();
   focus = { x: (geo.rx + geo.rw / 2 - geo.dx) / geo.dw, y: (geo.ry + geo.rh / 2 - geo.dy) / geo.dh }; // drop overshoot past the edge
 });
-canvas.addEventListener('pointerup', (e) => {
+stage.addEventListener('pointerup', (e) => {
   if (dragFrom && !moved) {
     const p = cardPoint(e);
     focus = { x: (p.x - geo.dx) / geo.dw, y: (p.y - geo.dy) / geo.dh };
@@ -594,17 +690,30 @@ canvas.addEventListener('pointerup', (e) => {
 // save
 const pngBlob = () => new Promise((res) => canvas.toBlob(res, 'image/png'));
 function say(t) { $('saveMsg').textContent = t; clearTimeout(say.timer); say.timer = setTimeout(() => { $('saveMsg').textContent = ''; }, 4000); }
-$('download').addEventListener('click', async () => {
-  draw();
+function save(blob, name) {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(await pngBlob());
-  a.download = `ngn-social-${new Date().toISOString().slice(0, 10)}.png`;
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+const fileName = (b, n) => `ngn-social-${b.slug || new Date().toISOString().slice(0, 10) + (boards.length > 1 ? `-${n + 1}` : '')}.png`;
+$('download').addEventListener('click', async () => {
+  CanvasEdit.stop(); draw();
+  save(await pngBlob(), fileName(boards[active], active));
   say('Saved.');
 });
+// Every artboard already holds its last render, so exporting all is just saving each canvas.
+$('downloadAll').addEventListener('click', async () => {
+  CanvasEdit.stop(); draw();
+  for (const [n, b] of boards.entries()) {
+    save(await new Promise((res) => b.canvas.toBlob(res, 'image/png')), fileName(b, n));
+    await new Promise((r) => setTimeout(r, 300)); // browsers drop rapid back-to-back downloads
+  }
+  say(`Saved ${boards.length} posts.`);
+});
 $('copy').addEventListener('click', () => {
-  draw();
+  CanvasEdit.stop(); draw();
   try {
     navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob() })])
       .then(() => say('Copied.'), () => say('Right-click the post and choose "Copy Image".'));
@@ -617,9 +726,24 @@ document.fonts.load(`40px ${FAMILY}`).then((faces) => {
   setFontStatus(kepler);
 }, () => {});
 
+addBoard(snapshot());
+select(0, false);
 applyPreset(PRESETS[0]);
 Promise.all(['400', 'italic 400', '700', 'italic 700'].map((v) => document.fonts.load(`${v} 40px ${FAMILY}`))).then(draw, draw);
 document.fonts.ready.then(draw);
+
+CanvasEdit.attach({ canvas: () => canvas, wrap: () => canvas.parentNode, root: stage, W, regions: () => regions, redraw: draw });
+Tour.init('social-post', [
+  { target: '#storyForm', side: 'left', title: 'Start from stories', body: 'Paste one or more news.northeastern.edu links, one per line. Each story becomes its own post with its headline and featured image.' },
+  { target: '.artboard.selected', side: 'right', title: 'Each post is an artboard', body: 'Click a post to select it; the panels edit the selected one. Click the headline to edit it in place, or click the photo to center it on the subject.' },
+  { target: '#presets', side: 'right', title: 'Pick a layout', body: 'Every layout keeps the logo and headline 80px from the edges, so posts line up on the grid.' },
+  { target: '#title', side: 'left', title: 'The headline', body: 'Lines balance automatically so no word sits alone. Select words and click B or I to style them.' },
+  { target: '#corners', side: 'left', title: 'Lock the logo', body: 'Pick the corner. If the headline shares it, the headline moves out of the way.' },
+  { target: '#bgMode', side: 'left', title: 'Background', body: 'Blurred backdrop pins the photo to one edge and blurs the band behind the headline.' },
+  { target: '#gOn', side: 'left', title: 'Gradient', body: 'Hover the post to see two handles. Drag them to change the gradient’s direction and length.' },
+  { target: '#addBoard', side: 'left', title: 'More posts', body: 'Add a blank post here, or hover a post’s name and click × to delete it.' },
+  { target: '#download', side: 'bottom', title: 'Export', body: 'Export PNG saves the selected post. With several posts, Export all saves every one. Click ? in the corner to see this tour again.' },
+]);
 </script>
 </body>
 </html>

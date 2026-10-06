@@ -47,6 +47,8 @@
   </aside>
 </main>
 
+<script src="canvas-edit.js"></script>
+<script src="tour.js"></script>
 <script>
 // Frame spec from the Figma "car data - quote" template: 1080×1350 on cream, a column of brand arrows on the right,
 // Inter 48/160% quote and 40/160% attribution, 80px left inset, centered in an 872px-tall block with a 64px gap.
@@ -63,7 +65,7 @@ const ARROW_SIZE = 179, ARROWS = [[839, 48], [659, 227], [839, 407], [659, 586],
 const $ = (id) => document.getElementById(id);
 const canvas = $('card'), ctx = canvas.getContext('2d');
 const quoteEl = $('quote'), attrEl = $('attr');
-let lastEditor = quoteEl;
+let regions = [];
 
 function say(t) { $('saveMsg').textContent = t; clearTimeout(say.timer); say.timer = setTimeout(() => { $('saveMsg').textContent = ''; }, 4000); }
 
@@ -173,23 +175,25 @@ function draw() {
   const a = attr.length ? balance(attr, A.size, A.maxW) : null;
   const qh = q.lines.length * Q.lh, ah = a ? GAP + a.lines.length * A.lh : 0;
   const top = BLOCK_TOP + (BLOCK_H - qh - ah) / 2;
-  drawBlock(q, Q, top);
-  if (a) drawBlock(a, A, top + qh + GAP);
+  const widest = (b) => Math.max(...b.lines.map((l) => l.w));
+  // Text regions for clicking to edit on the canvas; the block being edited is drawn by the overlay instead.
+  regions = [{ editor: quoteEl, x: X, y: top, w: widest(q), h: qh, size: Q.size, lh: Q.lh, family: FAMILY, color: Q.color }];
+  if (a) regions.push({ editor: attrEl, x: X, y: top + qh + GAP, w: widest(a), h: ah - GAP, size: A.size, lh: A.lh, family: FAMILY, color: A.color });
+  if (CanvasEdit.editing !== quoteEl) drawBlock(q, Q, top);
+  if (a && CanvasEdit.editing !== attrEl) drawBlock(a, A, top + qh + GAP);
   $('warn').hidden = qh + ah <= BLOCK_H;
 }
 
-for (const ed of [quoteEl, attrEl]) {
-  ed.addEventListener('input', draw);
-  ed.addEventListener('focus', () => { lastEditor = ed; });
-}
+for (const ed of [quoteEl, attrEl]) ed.addEventListener('input', draw);
 document.addEventListener('paste', (e) => {
-  if (e.target.closest?.('.editor')) { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); }
+  if (e.target.closest?.('[contenteditable]')) { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); }
 });
 document.querySelectorAll('.fmt').forEach((btn) => {
   const editor = btn.closest('.sec').querySelector('.editor');
   btn.addEventListener('mousedown', (e) => e.preventDefault()); // keep the text selection
   btn.addEventListener('click', () => {
-    if (!editor.contains(document.getSelection().anchorNode)) editor.focus();
+    const node = document.getSelection().anchorNode;
+    if (!editor.contains(node) && !CanvasEdit.owns(node)) editor.focus();
     document.execCommand('styleWithCSS', false, false);
     document.execCommand(btn.dataset.cmd);
     draw();
@@ -218,6 +222,15 @@ $('copy').addEventListener('click', () => {
 draw();
 Promise.all(['400', '700', 'italic 400', 'italic 700'].map((v) => document.fonts.load(`${v} 48px Inter`))).then(draw, draw);
 document.fonts.ready.then(draw);
+
+CanvasEdit.attach({ canvas, wrap: document.querySelector('.artboard'), W, regions: () => regions, redraw: draw });
+Tour.init('text-quote', [
+  { target: '.artboard', side: 'left', title: 'A quote card with no photo', body: 'The cream background and arrows are fixed. Click the quote or the attribution to edit the words right on the card.' },
+  { target: '#quote', side: 'left', title: 'Type the quote', body: 'Curly quotation marks are added for you, and lines balance so no word is left alone at the end.' },
+  { target: '#attr', side: 'left', title: 'Say who said it', body: 'Select the name and click B to bold it, as in the template.' },
+  { target: '#download', side: 'bottom', title: 'Export when it looks right', body: 'Export PNG saves the 1080 × 1350 post. Copy puts it on your clipboard.' },
+  { target: '.tabs', side: 'bottom', title: 'Other templates', body: 'Switch tools here. Click ? in the corner to see this tour again.' },
+]);
 </script>
 </body>
 </html>

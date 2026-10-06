@@ -74,6 +74,8 @@
     </section>
   </aside>
 </main>
+<script src="canvas-edit.js"></script>
+<script src="tour.js"></script>
 <script>
 // Card spec from the Figma frame: 1098×710, portrait 518 wide, black quote column with 110/48 padding, 33 gap.
 const W = 1098, H = 710, PW = 518, PAD_X = 48, PAD_Y = 110, GAP = 33, SCALE = 2;
@@ -101,6 +103,7 @@ let photo = null;
 // Focal point as a fraction of the photo (0–1); the frame centers on it as far as the crop allows.
 let focus = { x: 0.5, y: 0.4 };
 let geo = null;
+let regions = [];
 let lastEditor = quoteEl;
 
 // rich text -> runs
@@ -190,11 +193,29 @@ function layout(runs, size, maxW, family) {
   return { lines, space, family };
 }
 
+const lineWidth = (line, space) => line.reduce((s, word) => s + word.reduce((t, seg) => t + seg.w, 0), 0) + space * Math.max(0, line.length - 1);
+
+// Like CSS text-wrap: balance: the narrowest width that keeps the greedy line count, so no orphans.
+function balance(runs, size, maxW, family) {
+  const greedy = layout(runs, size, maxW, family);
+  const n = greedy.lines.length;
+  let best = greedy;
+  if (n > 1) {
+    let lo = maxW / 2, hi = maxW;
+    for (let i = 0; i < 12; i++) {
+      const mid = (lo + hi) / 2, b = layout(runs, size, mid, family);
+      if (b.lines.length <= n) { best = b; hi = mid; } else lo = mid;
+    }
+  }
+  best.w = Math.max(...best.lines.map((l) => lineWidth(l, best.space)));
+  return best;
+}
+
 function measure() {
   const qs = +$('qSize').value, as = +$('aSize').value;
   const maxW = W - PW - PAD_X * 2;
-  const q = layout(quoteRuns(), qs, maxW, QUOTE_FAMILY);
-  const a = layout(attrRuns(), as, maxW, ATTR_FAMILY);
+  const q = balance(quoteRuns(), qs, maxW, QUOTE_FAMILY);
+  const a = balance(attrRuns(), as, maxW, ATTR_FAMILY);
   // Line heights from the Figma spec: 40/48 (1.2) and 26/31 (~1.19).
   const qLh = Math.round(qs * 1.2), aLh = Math.round(as * 31 / 26);
   const total = q.lines.length * qLh + (a.lines.length && a.lines[0].length ? GAP + a.lines.length * aLh : 0);
@@ -244,8 +265,13 @@ function draw() {
   const m = measure();
   const x = PW + PAD_X;
   const top = Math.max(0, (H - m.total) / 2);
-  let y = drawBlock(m.q, m.qs, m.qLh, x, top);
-  if (m.a.lines.length && m.a.lines[0].length) drawBlock(m.a, m.as, m.aLh, x, y + GAP);
+  const qh = m.q.lines.length * m.qLh;
+  const hasAttr = m.a.lines.length && m.a.lines[0].length;
+  // Text regions for clicking to edit on the canvas; the block being edited is drawn by the overlay instead.
+  regions = [{ editor: quoteEl, x, y: top, w: m.q.w, h: qh, size: m.qs, lh: m.qLh, family: QUOTE_FAMILY, color: '#fff' }];
+  if (hasAttr) regions.push({ editor: attrEl, x, y: top + qh + GAP, w: m.a.w, h: m.a.lines.length * m.aLh, size: m.as, lh: m.aLh, family: ATTR_FAMILY, color: '#fff' });
+  for (const [r, block, size, lh] of [[regions[0], m.q, m.qs, m.qLh], [regions[1], m.a, m.as, m.aLh]])
+    if (r && CanvasEdit.editing !== r.editor) drawBlock(block, size, lh, x, r.y);
 
   $('warn').hidden = m.total <= H - PAD_Y * 2;
   for (const id of ['qSize', 'aSize']) document.querySelector(`output[for=${id}]`).textContent = $(id).value + 'px';
@@ -273,7 +299,7 @@ document.addEventListener('paste', (e) => {
   const file = [...(e.clipboardData?.files || [])].find((f) => f.type.startsWith('image/'));
   if (file) { e.preventDefault(); loadPhoto(file); return; }
   // Paste into the editors as plain text so outside formatting doesn't leak in.
-  if (e.target.closest?.('.editor')) {
+  if (e.target.closest?.('[contenteditable]')) {
     e.preventDefault();
     document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
   }
@@ -289,9 +315,11 @@ for (const ed of [quoteEl, attrEl]) {
   ed.addEventListener('focus', () => { lastEditor = ed; });
 }
 document.querySelectorAll('.fmt').forEach((btn) => {
+  const editor = btn.closest('.sec').querySelector('.editor');
   btn.addEventListener('mousedown', (e) => e.preventDefault()); // keep the text selection
   btn.addEventListener('click', () => {
-    if (!lastEditor.contains(document.getSelection().anchorNode)) lastEditor.focus();
+    const node = document.getSelection().anchorNode;
+    if (!editor.contains(node) && !CanvasEdit.owns(node)) editor.focus();
     document.execCommand('styleWithCSS', false, false);
     document.execCommand(btn.dataset.cmd);
     draw();
@@ -306,7 +334,7 @@ function cardPoint(e) {
 let dragFrom = null, moved = false;
 canvas.addEventListener('pointerdown', (e) => {
   const p = cardPoint(e);
-  if (!geo || p.x > PW) return;
+  if (!geo || p.x > PW || CanvasEdit.hit(p)) return;
   dragFrom = p; moved = false;
   canvas.setPointerCapture(e.pointerId);
 });
@@ -392,6 +420,17 @@ draw();
 const variants = ['400', 'italic 400', '700', 'italic 700'];
 Promise.all(variants.flatMap((v) => [QUOTE_FAMILY, ATTR_FAMILY].map((f) => document.fonts.load(`${v} 40px ${f}`)))).then(draw, draw);
 document.fonts.ready.then(draw);
+
+CanvasEdit.attach({ canvas, wrap: document.querySelector('.artboard'), W, regions: () => regions, redraw: draw });
+Tour.init('quote-card', [
+  { target: '.artboard', side: 'left', title: 'This is your card', body: 'Everything you change shows up here. Click the photo to center it on a face, or click the quote to edit the words right on the card.' },
+  { target: '.drop', side: 'left', title: 'Add the photo', body: 'Choose a file, drag one onto the card, or paste with ⌘V. Use Zoom to crop in closer.' },
+  { target: '#quote', side: 'left', title: 'Type the quote', body: 'Curly quotation marks are added for you. Select words and click B or I to bold or italicize them.' },
+  { target: '#attr', side: 'left', title: 'Say who said it', body: 'Italicize the name like the house style. The leading dash is added for you.' },
+  { target: '#qSize', side: 'left', title: 'Long quote? Shrink it', body: 'If a message says the text runs past the margins, bring the sizes down here.' },
+  { target: '#download', side: 'bottom', title: 'Export when it looks right', body: 'Export PNG saves a sharp 2× image. Copy puts it on your clipboard to paste into Slack.' },
+  { target: '.tabs', side: 'bottom', title: 'Other templates', body: 'Switch to the social post or text quote tools here. Click ? in the corner to see this tour again.' },
+]);
 </script>
 </body>
 </html>
