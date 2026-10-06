@@ -40,18 +40,6 @@
 .corners [data-v=bl] { bottom: 3px; left: 3px; } .corners [data-v=br] { bottom: 3px; right: 3px; }
 .logo-row { display: flex; gap: 12px; align-items: center; }
 #storyForm { display: grid; gap: 6px; }
-.caption-status { display: flex; align-items: center; gap: 8px; color: var(--text-2); }
-.caption-status.busy::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--sel); animation: spin .8s linear infinite; flex: none; }
-.caption-status.error { color: var(--warn); }
-@keyframes spin { to { transform: rotate(360deg); } }
-.key-box summary { cursor: pointer; color: var(--text-2); font-size: 12px; }
-.key-box[open] summary { margin-bottom: 8px; }
-.key-box { display: grid; gap: 6px; }
-.key-form { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
-#caption[readonly] { opacity: .55; }
-#caption { resize: vertical; font-size: 12px; line-height: 17px; white-space: pre-wrap; }
-.caption-actions { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
-.note.flag { color: var(--warn); }
 /* Post kinds: the panels show only the controls the selected artboard uses */
 body:not([data-kind="social"]) .kind-social, body:not([data-kind="quote"]) .kind-quote, body:not([data-kind="end"]) .kind-end, body[data-kind="social"] .kind-fixed { display: none; }
 .quote-note { padding: 12px 16px; }
@@ -176,26 +164,6 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
       <p class="note" id="storyMsg">Opens each story as its own file, with its post and a text quote for each quote in the story.</p>
     </section>
 
-    <section class="sec" id="captionSec" hidden>
-      <div class="sec-head"><h2>Instagram caption</h2></div>
-      <textarea class="field" id="caption" rows="11" aria-label="Instagram caption"></textarea>
-      <p class="note caption-status" id="captionStatus" hidden></p>
-      <p class="note flag" id="captionFlag" hidden></p>
-      <div class="caption-actions">
-        <button type="button" class="btn outline" id="draftCaption"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z"/></svg><span>Write with Claude</span></button>
-        <button type="button" class="btn outline" id="copyCaption"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>
-      </div>
-      <details class="key-box" id="keyBox">
-        <summary>API key</summary>
-        <form id="keyForm" class="key-form">
-          <input class="field" type="password" id="apiKey" placeholder="sk-ant-…" autocomplete="off" aria-label="Anthropic API key">
-          <button type="submit" class="btn outline">Save</button>
-        </form>
-        <p class="note" id="keyNote">With the team’s Anthropic API key, each story’s caption is written as soon as you open it. The key is saved only in this browser and sent only to Anthropic.</p>
-        <button type="button" class="btn" id="keyRemove" hidden>Remove key</button>
-      </details>
-    </section>
-
     <section class="sec kind-end">
       <div class="sec-head"><h2>End slide</h2></div>
       <p class="note">The last slide of the carousel, the same on every story: “Link in bio for the full story: news.northeastern.edu”.</p>
@@ -273,7 +241,6 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
 <script src="tour.js"></script>
 <script src="text-quote-render.js"></script>
 <script src="quotes.js"></script>
-<script src="caption.js"></script>
 <script>
 // Frame spec from the Figma "Bottom" template: 1080×1350, 80px margins, 64px logo, Kepler 72/120%.
 const W = 1080, H = 1350, M = 80, LOGO = 64, LOGO_GAP = 40, FULL_W = 920, NARROW_W = 600;
@@ -716,7 +683,6 @@ function storyFromApi(item) {
     title: new DOMParser().parseFromString(item.title.rendered, 'text/html').body.textContent.replace(/\s+/g, ' ').trim(),
     src: media?.source_url || null,
     thumb: media?.media_details?.sizes?.medium_large?.source_url || media?.source_url || null,
-    credit: Captions.credit(media?.caption?.rendered),
   };
 }
 async function fetchStory(link) {
@@ -748,10 +714,6 @@ async function buildStoryFile(st) {
     { ...DEFAULT_POST, kind: 'end', story: st.slug }, // the carousel's closing slide
   ];
   const f = makeFile(st.title, st.slug, posts);
-  const text = content ? [...new DOMParser().parseFromString(content.content.rendered, 'text/html').querySelectorAll('p')]
-    .map((p) => p.textContent.trim()).filter(Boolean).join('\n\n') : '';
-  Object.assign(f, { link: st.link, credit: st.credit, caption: Captions.template(st.credit), text });
-  if (apiKey()) writeCaption(f);
   return { file: f, noImage: !img, quotes: quotes.length };
 }
 const quotePost = (story, q) => ({
@@ -911,7 +873,6 @@ function openFile(f) {
   for (const b of boards) $('boards').insertBefore(b.el, $('addWrap'));
   if (!f.drawn) { for (let i = 0; i < boards.length; i++) select(i, false); f.drawn = true; } // first render of each artboard
   select(start, false);
-  showCaption();
   requestAnimationFrame(() => boards[active].el.scrollIntoView({ inline: 'center', block: 'nearest' }));
 }
 // save: store the outgoing post's settings first (false when it was just removed or overwritten).
@@ -1113,58 +1074,6 @@ $('copy').addEventListener('click', () => {
   } catch { say('Right-click the post and choose "Copy Image".'); }
 });
 
-// The caption belongs to the story file. With an API key it's written by Claude as soon as the story opens;
-// without one, Draft in claude.ai opens a chat with the team prompt instead.
-const KEY = 'ngn-studio-anthropic-key';
-const apiKey = () => { try { return localStorage.getItem(KEY) || ''; } catch { return ''; } };
-async function writeCaption(f) {
-  f.captionState = { busy: true };
-  if (f === file) showCaption();
-  try {
-    f.caption = await Captions.generate({ apiKey: apiKey(), title: f.title, link: f.link, text: f.text, credit: f.credit });
-    f.captionState = { done: true };
-  } catch (err) {
-    f.captionState = { error: err.message };
-  }
-  if (f === file) showCaption();
-}
-function showCaption() {
-  $('captionSec').hidden = !file.story;
-  if (!file.story) return;
-  const st = file.captionState || {}, hasKey = !!apiKey();
-  $('caption').value = file.caption;
-  $('caption').readOnly = !!st.busy;
-  $('captionStatus').hidden = !(st.busy || st.error || st.done);
-  $('captionStatus').className = `note caption-status${st.busy ? ' busy' : st.error ? ' error' : ''}`;
-  $('captionStatus').textContent = st.busy ? 'Claude is writing the caption…' : st.error || 'Written by Claude. Check it before posting.';
-  $('captionFlag').hidden = !file.credit.flag;
-  $('captionFlag').textContent = file.credit.flag ? `Photo credit: ${file.credit.flag}` : '';
-  $('draftCaption').disabled = !!st.busy;
-  $('draftCaption').querySelector('span').textContent = hasKey ? (st.done ? 'Rewrite with Claude' : 'Write with Claude') : 'Draft in claude.ai';
-  $('keyRemove').hidden = !hasKey;
-  $('apiKey').placeholder = hasKey ? 'Key saved. Paste a new one to replace it.' : 'sk-ant-…';
-}
-$('caption').addEventListener('input', () => { file.caption = $('caption').value; });
-$('draftCaption').addEventListener('click', () => {
-  if (apiKey()) { writeCaption(file); return; }
-  navigator.clipboard?.writeText(Captions.message(file.link, file.credit)).catch(() => {});
-  window.open(Captions.claudeUrl(file.link, file.credit), '_blank', 'noopener');
-  say('Opened Claude with the caption prompt and this story (also on your clipboard). Add an API key to have captions written here.');
-});
-$('keyForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const k = $('apiKey').value.trim();
-  if (!k) return;
-  try { localStorage.setItem(KEY, k); } catch { say('This browser won’t save the key (private window?).'); return; }
-  $('apiKey').value = ''; $('keyBox').open = false;
-  say('API key saved in this browser.');
-  if (file.story && !file.captionState) writeCaption(file); else showCaption();
-});
-$('keyRemove').addEventListener('click', () => { try { localStorage.removeItem(KEY); } catch {} say('API key removed from this browser.'); showCaption(); });
-$('keyBox').open = !apiKey();
-$('copyCaption').addEventListener('click', () => {
-  navigator.clipboard.writeText($('caption').value).then(() => say('Caption copied.'), () => { $('caption').select(); say('Press ⌘C to copy the selected caption.'); });
-});
 
 // fonts
 document.fonts.load(`40px ${FAMILY}`).then((faces) => {
