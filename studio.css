@@ -1,6 +1,6 @@
 /* NGN Studio: editor chrome shared by the quote card and social post tools.
    World: a design-tool workspace. Neutral chrome that recedes, the artboard is the only loud thing,
-   one functional blue for selection and focus, brand red only inside the logo. */
+   Northeastern red as the one accent for selection, focus and primary actions. */
 :root {
   --chrome: #ffffff;        /* top bar + panels */
   --canvas: #f0f0f0;        /* workspace behind the artboard */
@@ -12,14 +12,14 @@
   --text: #1e1e1e;
   --text-2: #6b6b6b;
   --text-3: #737373;
-  --sel: #0d99ff;           /* selection, focus, primary */
-  --sel-soft: rgb(13 153 255 / .12);
-  --sel-text: #0a7fd6;
+  --sel: #c8102e;           /* Northeastern red: selection, focus, primary */
+  --sel-soft: rgb(200 16 46 / .09);
+  --sel-text: #b00e28;
   --on-sel: #ffffff;
-  --btn: #0a6fc2;           /* primary button: the selection blue darkened to clear 4.5:1 under white text */
-  --btn-hover: #095ea6;
+  --btn: #c8102e;           /* primary button: Northeastern red, 5.9:1 under white text */
+  --btn-hover: #a50d26;
   --ok: #14ae5c;
-  --warn: #f24822;
+  --warn: #d97706;           /* amber, so warnings don't read as the red accent */
   --toast: #1e1e1e;
   --toast-text: #ffffff;
   --shadow-art: 0 1px 2px rgb(0 0 0 / .08), 0 8px 32px rgb(0 0 0 / .12);
@@ -32,7 +32,7 @@
   --chrome: #2c2c2c; --canvas: #1e1e1e; --dot: rgb(255 255 255 / .06); --line: #3a3a3a;
   --field: #383838; --field-hover: #424242; --raised: #4a4a4a;
   --text: #f5f5f5; --text-2: #b3b3b3; --text-3: #a3a3a3;
-  --sel: #0d99ff; --sel-soft: rgb(13 153 255 / .2); --sel-text: #5cb8ff; --on-sel: #ffffff;
+  --sel: #e8475f; --sel-soft: rgb(232 71 95 / .18); --sel-text: #ff8a99; --on-sel: #ffffff;
   --toast: #f5f5f5; --toast-text: #1e1e1e;
   --shadow-art: 0 1px 2px rgb(0 0 0 / .4), 0 12px 40px rgb(0 0 0 / .5);
   color-scheme: dark;
@@ -41,7 +41,7 @@
   --chrome: #2c2c2c; --canvas: #1e1e1e; --dot: rgb(255 255 255 / .06); --line: #3a3a3a;
   --field: #383838; --field-hover: #424242; --raised: #4a4a4a;
   --text: #f5f5f5; --text-2: #b3b3b3; --text-3: #a3a3a3;
-  --sel: #0d99ff; --sel-soft: rgb(13 153 255 / .2); --sel-text: #5cb8ff; --on-sel: #ffffff;
+  --sel: #e8475f; --sel-soft: rgb(232 71 95 / .18); --sel-text: #ff8a99; --on-sel: #ffffff;
   --toast: #f5f5f5; --toast-text: #1e1e1e;
   --shadow-art: 0 1px 2px rgb(0 0 0 / .4), 0 12px 40px rgb(0 0 0 / .5);
   color-scheme: dark;
@@ -219,10 +219,10 @@ select:hover { border-color: var(--line); }
   white-space: normal; overflow-wrap: normal; word-break: normal; font-kerning: normal; caret-color: var(--sel); cursor: text;
 }
 .canvas-editor b, .canvas-editor strong { font-weight: 700; }
-.canvas-editor::selection, .canvas-editor *::selection { background: rgb(13 153 255 / .35); }
+.canvas-editor::selection, .canvas-editor *::selection { background: rgb(200 16 46 / .35); }
 
 /* Wrap-width frame while editing: the dashed box is the headline's wrap width; square handles resize it */
-.wrap-frame { position: absolute; pointer-events: none; outline: 1px dashed rgb(13 153 255 / .7); outline-offset: 6px; }
+.wrap-frame { position: absolute; pointer-events: none; outline: 1px dashed var(--sel); outline-offset: 6px; }
 .wrap-handle {
   position: absolute; top: 50%; width: 10px; height: 10px; margin-top: -5px; pointer-events: all; cursor: ew-resize;
   background: #fff; border: 1.5px solid var(--sel); border-radius: 2px; box-shadow: 0 1px 2px rgb(0 0 0 / .3);
