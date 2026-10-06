@@ -6,7 +6,7 @@
 <title>Social Post Builder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,72,400;0,72,700;1,72,400;1,72,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700&family=Newsreader:ital,opsz,wght@0,72,400;0,72,700;1,72,400;1,72,700&display=swap">
 <link rel="stylesheet" href="studio.css">
 <style>
 /* Kepler Std (Adobe) is used when installed; local() pins the Display cut, since the family has 100+ widths and optical sizes. */
@@ -39,6 +39,29 @@
 .corners [data-v=bl] { bottom: 3px; left: 3px; } .corners [data-v=br] { bottom: 3px; right: 3px; }
 .logo-row { display: flex; gap: 12px; align-items: center; }
 #storyForm { display: grid; gap: 6px; }
+/* Post kinds: the panels show only the controls the selected artboard uses */
+body[data-kind="quote"] .kind-social, body:not([data-kind="quote"]) .kind-quote { display: none; }
+.quote-note { padding: 12px 16px; }
+.files { display: grid; gap: 2px; padding: 4px 8px 8px; max-height: 30vh; overflow-y: auto; border-bottom: 1px solid var(--line); }
+.files button { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border: 0; border-radius: var(--r); background: none; color: var(--text); font: 12px var(--ui); text-align: left; cursor: pointer; min-width: 0; }
+.files button span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files button svg { color: var(--text-3); }
+.files button small { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.files button:hover { background: var(--field); }
+.files button[aria-pressed="true"] { background: var(--sel-soft); color: var(--sel-text); font-weight: 500; }
+.files button[aria-pressed="true"] svg { color: var(--sel-text); }
+.add-wrap { position: relative; flex: none; align-self: stretch; margin-top: 24px; display: flex; }
+.add-wrap .add-board { margin-top: 0; }
+.add-board[aria-expanded="true"] { border-color: var(--sel); color: var(--sel-text); background: var(--sel-soft); }
+.menu {
+  position: absolute; z-index: 5; top: 50%; right: calc(100% + 8px); transform: translateY(-50%); width: 232px; padding: 4px; /* opens over the last artboard; the right panel would clip it */
+  background: var(--chrome); border-radius: 8px; box-shadow: var(--shadow-pop), 0 0 0 1px var(--line); animation: toast-in .2s cubic-bezier(.16, 1, .3, 1);
+}
+.menu button { display: flex; gap: 10px; align-items: flex-start; width: 100%; padding: 8px; border: 0; border-radius: 6px; background: none; color: var(--text); font: 12px var(--ui); text-align: left; cursor: pointer; }
+.menu button:hover, .menu button:focus-visible { background: var(--sel-soft); outline: none; }
+.menu button svg { margin-top: 1px; color: var(--text-2); }
+.menu strong { display: block; font-weight: 500; }
+.menu small { display: block; color: var(--text-3); font-size: 11px; line-height: 15px; margin-top: 1px; }
 /* Views: the latest-stories grid is home; the editor opens a story as an artboard */
 body[data-view="gallery"] main.workspace, body[data-view="editor"] .gallery { display: none; }
 body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chip { display: none; }
@@ -111,21 +134,30 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
 </section>
 
 <main class="workspace with-left">
-  <aside class="panel left" aria-label="Layouts">
+  <aside class="panel left kind-social-panel" aria-label="Layouts">
     <div class="back-row"><button type="button" class="btn" id="toGallery"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Latest stories</button></div>
-    <div class="sec-head"><h2>Layouts</h2></div>
-    <div class="presets" id="presets"></div>
+    <div class="sec-head"><h2>Files</h2></div>
+    <div class="files" id="files"></div>
+    <div class="kind-social"><div class="sec-head"><h2>Layouts</h2></div>
+    <div class="presets" id="presets"></div></div>
+    <p class="note kind-quote quote-note">Text quotes use one fixed layout, so there’s nothing to choose here.</p>
   </aside>
 
   <section class="stage" id="stage" aria-label="Canvas">
     <div class="boards" id="boards">
-      <button type="button" class="add-board" id="addBoard"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New post</button>
+      <div class="add-wrap" id="addWrap">
+        <button type="button" class="add-board" id="addBoard" aria-haspopup="menu" aria-expanded="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New post</button>
+        <div class="menu" id="addMenu" role="menu" hidden>
+          <button type="button" role="menuitem" data-kind="social"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 17h8M8 14h5"/></svg><span><strong>Social post</strong><small>Photo and headline</small></span></button>
+          <button type="button" role="menuitem" data-kind="quote"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg><span><strong>Text quote</strong><small id="quoteHint">A quote on the cream card</small></span></button>
+        </div>
+      </div>
     </div>
     <svg id="gradUi" viewBox="0 0 1080 1350" aria-hidden="true">
       <line id="gLine"/><circle id="gStart" class="handle" r="16"/><circle id="gEnd" class="handle" r="16"/>
     </svg>
     <div class="toasts">
-      <div class="toast" id="warn" hidden><span class="dot"></span><span>Headline is too long for this layout. Shorten it or pick a full-width layout.</span></div>
+      <div class="toast" id="warn" hidden><span class="dot"></span><span>Text is too long for this layout. Shorten it, or for a headline pick a full-width layout.</span></div>
       <div class="toast plain" id="saveMsg" role="status"></div>
     </div>
   </section>
@@ -137,10 +169,23 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
         <textarea class="field" id="storyUrl" rows="3" placeholder="Paste story links, one per line" aria-label="Story links" required></textarea>
         <button type="submit" class="btn outline"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Import</button>
       </form>
-      <p class="note" id="storyMsg">Brings in each story’s headline and featured image. Several links make several posts.</p>
+      <p class="note" id="storyMsg">Opens each story as its own file, with its post and a text quote for each quote in the story.</p>
     </section>
 
-    <section class="sec">
+    <section class="sec kind-quote">
+      <div class="sec-head"><h2 id="tqQuoteLabel">Quote</h2><div class="toolbar"><button type="button" class="btn icon fmt" data-cmd="bold" title="Bold (⌘B)" aria-label="Bold"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg></button>
+          <button type="button" class="btn icon fmt" data-cmd="italic" title="Italic (⌘I)" aria-label="Italic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4h-9M14 20H5M15 4 9 20"/></svg></button></div></div>
+      <div class="editor" id="tqQuote" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="tqQuoteLabel"></div>
+      <p class="note">Curly quotation marks are added for you.</p>
+    </section>
+    <section class="sec kind-quote">
+      <div class="sec-head"><h2 id="tqAttrLabel">Attribution</h2><div class="toolbar"><button type="button" class="btn icon fmt" data-cmd="bold" title="Bold (⌘B)" aria-label="Bold"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg></button>
+          <button type="button" class="btn icon fmt" data-cmd="italic" title="Italic (⌘I)" aria-label="Italic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4h-9M14 20H5M15 4 9 20"/></svg></button></div></div>
+      <div class="editor" id="tqAttr" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="tqAttrLabel"></div>
+      <p class="note">Check the name and title against the story before you post.</p>
+    </section>
+
+    <section class="sec kind-social">
       <div class="sec-head"><h2>Photo</h2></div>
       <label class="drop">
         <span class="thumb" id="thumb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></span>
@@ -150,7 +195,7 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
       <div class="prop"><label for="zoom">Zoom</label><input type="range" id="zoom" min="100" max="250" value="100"><output class="val" for="zoom"></output></div>
     </section>
 
-    <section class="sec">
+    <section class="sec kind-social">
       <div class="sec-head"><h2>Headline</h2><div class="toolbar"><button type="button" class="btn icon fmt" data-cmd="bold" title="Bold (⌘B)" aria-label="Bold"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg></button>
           <button type="button" class="btn icon fmt" data-cmd="italic" title="Italic (⌘I)" aria-label="Italic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4h-9M14 20H5M15 4 9 20"/></svg></button></div></div>
       <div class="editor" id="title" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Headline">How wildfires creeping toward wine regions in Spain and France may affect this year’s harvest</div>
@@ -162,7 +207,7 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
       </div></div>
     </section>
 
-    <section class="sec">
+    <section class="sec kind-social">
       <div class="sec-head"><h2>Logo</h2></div>
       <div class="logo-row">
         <div class="corners" id="corners" role="group" aria-label="Logo corner">
@@ -173,7 +218,7 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
       </div>
     </section>
 
-    <section class="sec">
+    <section class="sec kind-social">
       <div class="sec-head"><h2>Background</h2></div>
       <div class="seg" id="bgMode">
         <button type="button" data-v="photo">Full photo</button><button type="button" data-v="blur">Blurred backdrop</button>
@@ -184,7 +229,7 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
       </div>
     </section>
 
-    <section class="sec">
+    <section class="sec kind-social">
       <div class="sec-head"><h2>Gradient</h2>
         <div class="seg" id="gOn"><button type="button" data-v="on">On</button><button type="button" data-v="off">Off</button></div>
       </div>
@@ -197,6 +242,8 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
 </main>
 <script src="canvas-edit.js"></script>
 <script src="tour.js"></script>
+<script src="text-quote-render.js"></script>
+<script src="quotes.js"></script>
 <script>
 // Frame spec from the Figma "Bottom" template: 1080×1350, 80px margins, 64px logo, Kepler 72/120%.
 const W = 1080, H = 1350, M = 80, LOGO = 64, LOGO_GAP = 40, FULL_W = 920, NARROW_W = 600;
@@ -232,6 +279,8 @@ function setFontStatus(ok) {
 }
 
 let canvas, ctx; // the selected artboard's canvas; see select()
+let kind = 'social'; // the selected artboard's kind: 'social' (photo + headline) or 'quote' (text quote card)
+const tqQuote = $('tqQuote'), tqAttr = $('tqAttr');
 let regions = [];
 const titleEl = $('title');
 const state = { preset: PRESETS[0], logo: 'tl', align: 'left', color: '#fff', bg: 'photo', gOn: 'on' };
@@ -440,6 +489,15 @@ function drawGradientUi() {
 }
 
 function draw() {
+  if (kind === 'quote') {
+    const r = TextQuoteCard.draw(ctx, tqQuote, tqAttr, CanvasEdit.editing);
+    regions = r.regions; geo = null;
+    $('warn').hidden = r.fits;
+    $('gradUi').style.display = 'none';
+    const who = tqAttr.querySelector('b, strong')?.textContent.replace(/,\s*$/, '');
+    boards[active].el.querySelector('.name').textContent = `Quote${who ? ` · ${who}` : ''}`;
+    return;
+  }
   const tb = textBox();
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
 
@@ -547,12 +605,14 @@ for (const [id, which] of [['gStart', 0], ['gEnd', 1]]) {
 addEventListener('resize', drawGradientUi);
 
 for (const el of document.querySelectorAll('input[type=range]')) el.addEventListener('input', draw);
-titleEl.addEventListener('input', draw);
+for (const ed of [titleEl, tqQuote, tqAttr]) ed.addEventListener('input', draw);
 
 document.querySelectorAll('.fmt').forEach((btn) => {
+  const editor = btn.closest('.sec').querySelector('.editor');
   btn.addEventListener('mousedown', (e) => e.preventDefault()); // keep the text selection
   btn.addEventListener('click', () => {
-    if (!titleEl.contains(document.getSelection().anchorNode)) titleEl.focus();
+    const node = document.getSelection().anchorNode;
+    if (!editor.contains(node) && !CanvasEdit.owns(node)) editor.focus();
     document.execCommand('styleWithCSS', false, false);
     document.execCommand(btn.dataset.cmd);
     draw();
@@ -606,24 +666,41 @@ async function fetchStory(link) {
   throw new Error('no published story found');
 }
 
-// Turn stories into artboards. One story fills the selected post when it's still empty; otherwise each gets its own.
-// An artboard already open for a story is reused rather than duplicated.
+// Each story is its own file: its social post plus a text quote for each quote found in the story. Opening a story
+// that already has a file switches to it with its edits intact.
+async function buildStoryFile(st) {
+  const [img, content] = await Promise.all([
+    st.src ? loadImage(st.src, true).catch(() => null) : null,
+    fetch(`${SITE}/wp-json/wp/v2/newspost/${st.id}?_fields=content`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+  ]);
+  const quotes = content ? StoryQuotes.find(content.content.rendered, 3) : [];
+  const posts = [
+    { ...DEFAULT_POST, kind: 'social', photo: img, title: escapeHtml(st.title), slug: st.slug },
+    ...quotes.map((q) => quotePost(st.slug, q)),
+  ];
+  return { file: makeFile(st.title, st.slug, posts), noImage: !img, quotes: quotes.length };
+}
+const quotePost = (story, q) => ({
+  ...DEFAULT_POST, kind: 'quote', story,
+  quote: q ? escapeHtml(q.quote) : 'Type the quote here.',
+  attr: q ? `<b>${escapeHtml(q.name)}${q.desc ? ',' : ''}</b>${q.desc ? ` ${escapeHtml(q.desc)}` : ''}` : '<b>Name,</b> title',
+});
 async function openStories(stories) {
-  const imgs = await Promise.all(stories.map((st) => (st.src ? loadImage(st.src, true).catch(() => null) : null)));
-  const base = snapshot();
-  let first = -1;
-  stories.forEach((st, n) => {
-    const post = { ...base, photo: imgs[n], focus: { x: 0.5, y: 0.4 }, zoom: 100, title: escapeHtml(st.title), slug: st.slug };
-    const open = boards.findIndex((b) => b.slug === st.slug);
-    let i;
-    if (open >= 0) i = open;
-    else if (!photo && !boards[active].slug && boards[active].title === EMPTY_TITLE && n === 0) { Object.assign(boards[active], post); i = active; select(i, false); }
-    else { addBoard(post); i = boards.length - 1; select(i); }
-    if (first < 0) first = i;
-  });
-  select(first);
-  requestAnimationFrame(() => boards[first].el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }));
-  return imgs.filter((x) => !x).length;
+  let first = null, msg = [];
+  for (const st of stories) {
+    let f = files.find((x) => x.story === st.slug);
+    if (!f) {
+      const built = await buildStoryFile(st);
+      f = built.file;
+      if (stories.length === 1) msg = [
+        built.quotes ? `Built the post and ${built.quotes} text ${built.quotes === 1 ? 'quote' : 'quotes'} from the story. Check names and titles before posting.` : 'Built the post. No quotes with a named speaker turned up for text quotes.',
+        built.noImage ? 'This story has no featured image; add a photo.' : '',
+      ];
+    }
+    first ??= f;
+  }
+  openFile(first);
+  return msg.filter(Boolean).join(' ');
 }
 
 $('storyUrl').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('storyForm').requestSubmit(); });
@@ -635,15 +712,13 @@ $('storyForm').addEventListener('submit', async (e) => {
   const results = await Promise.allSettled(links.map(fetchStory));
   const ok = results.filter((r) => r.status === 'fulfilled').map((r) => r.value);
   const failed = results.map((r, i) => (r.status === 'rejected' ? `${links[i].replace(/^https?:\/\/[^/]+/, '')} (${r.reason instanceof TypeError ? 'couldn’t reach the site' : r.reason.message})` : null)).filter(Boolean);
-  const noImage = ok.length ? await openStories(ok) : 0;
+  const detail = ok.length ? await openStories(ok) : '';
   $('storyMsg').textContent = [
-    ok.length ? `Loaded ${ok.length === 1 ? 'the story' : `${ok.length} stories`}.` : '',
-    noImage ? `${noImage === 1 ? 'One has' : `${noImage} have`} no featured image; add a photo.` : '',
+    ok.length ? (ok.length === 1 ? detail || 'Opened the story.' : `Opened ${ok.length} stories as files; switch between them under Files.`) : '',
     failed.length ? `Couldn’t load ${failed.join(', ')}.` : '',
   ].filter(Boolean).join(' ');
 });
 const escapeHtml = (t) => { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
-const EMPTY_TITLE = 'How wildfires creeping toward wine regions in Spain and France may affect this year’s harvest';
 
 // Latest stories: the home view. Each tile previews the post the editor would make (Bottom layout), live from the
 // site; it re-checks every few minutes while open, so a newly published story shows up on its own.
@@ -667,7 +742,7 @@ function renderGallery() {
     tile.innerHTML = `<span class="tile-art"${st.thumb ? ` style="background-image:url('${st.thumb}')"` : ''}>
         ${BADGE}<span class="tile-head"></span>${st.thumb ? '' : '<span class="tile-nophoto">No featured image</span>'}
         <span class="tile-open">Edit post</span></span>
-      <span class="tile-meta"><span class="tile-title"></span><span class="tile-date">${st.isNew ? '<b>New</b> · ' : ''}${ago(st.date)}</span></span>`;
+      <span class="tile-meta"><span class="tile-title"></span><span class="tile-date">${st.isNew ? '<b>New</b> · ' : ''}${ago(st.date)}${files.some((f) => f.story === st.slug) ? ' · <b>Open</b>' : ''}</span></span>`;
     tile.querySelector('.tile-head').textContent = st.title;
     tile.querySelector('.tile-title').textContent = st.title;
     tile.addEventListener('click', () => openFromGallery(st));
@@ -699,10 +774,11 @@ async function refreshGallery(more = false) {
   }
 }
 async function openFromGallery(st) {
-  say('Opening the story…');
+  const known = files.some((f) => f.story === st.slug);
+  if (!known) say('Building the post and finding quotes…');
+  const msg = await openStories([st]);
   showView('editor');
-  const noImage = await openStories([st]);
-  say(noImage ? 'This story has no featured image. Add a photo.' : 'Ready to edit.');
+  if (msg) say(msg);
 }
 function showView(v) {
   document.body.dataset.view = v;
@@ -712,29 +788,68 @@ function showView(v) {
 $('galleryRefresh').addEventListener('click', () => refreshGallery());
 $('galleryMore').addEventListener('click', () => refreshGallery(true));
 $('toGallery').addEventListener('click', () => showView('gallery'));
-$('toEditor').addEventListener('click', () => showView('editor'));
+$('toEditor').addEventListener('click', () => { openFile(files.find((f) => !f.story) || makeFile('Untitled', null, [{ ...DEFAULT_POST }])); showView('editor'); });
 setInterval(() => { if (!document.hidden) refreshGallery(); }, 5 * 60 * 1000);
 setInterval(() => { if (document.body.dataset.view === 'gallery') $('galleryStatus').textContent = `From news.northeastern.edu · checked ${ago(gallery.updated || new Date())}`; }, 60 * 1000);
 
 
-// Artboards: each post keeps its own settings; the panels edit the selected one.
-const boards = [];
-let active = 0;
+// Files hold artboards; each artboard keeps its own settings and the panels edit the selected one.
+const files = [];
+let file = null, boards = [], active = 0;
 const snapshot = () => ({
-  photo, focus: { ...focus }, zoom: $('zoom').value, title: titleEl.innerHTML, state: { ...state },
+  kind, quote: tqQuote.innerHTML, attr: tqAttr.innerHTML, photo, focus: { ...focus }, zoom: $('zoom').value, title: titleEl.innerHTML, state: { ...state },
   g0: { ...g0 }, g1: { ...g1 }, gDark: $('gDark').value, insetH: $('insetH').value,
 });
-function addBoard(post) {
+function makeBoard(post) {
   const el = document.createElement('div');
   el.className = 'artboard';
   el.innerHTML = `<div class="frame-label"><span><span class="name"></span></span><span>1080 × 1350
     <button type="button" class="x" aria-label="Delete post" title="Delete post"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span></div>
     <div class="art-wrap"><canvas width="1080" height="1350" aria-label="Post preview"></canvas></div>`;
-  $('boards').insertBefore(el, $('addBoard'));
   const board = { ...post, el, canvas: el.querySelector('canvas') };
   el.querySelector('.x').addEventListener('click', (e) => { e.stopPropagation(); removeBoard(boards.indexOf(board)); });
+  return board;
+}
+function addBoard(post) {
+  const board = makeBoard(post);
+  $('boards').insertBefore(board.el, $('addWrap'));
   boards.push(board);
   return board;
+}
+function makeFile(title, story, posts) {
+  const f = { title, story, boards: posts.map(makeBoard), active: 0, drawn: false };
+  files.push(f);
+  return f;
+}
+// Swap the canvas over to another file's artboards, keeping the outgoing file's state.
+function openFile(f) {
+  if (f === file) return;
+  CanvasEdit.stop();
+  if (file) {
+    Object.assign(boards[active], snapshot());
+    file.active = active;
+    $('stage').append($('gradUi'));
+    for (const b of boards) b.el.remove();
+  }
+  file = f; boards = f.boards; active = f.active;
+  for (const b of boards) $('boards').insertBefore(b.el, $('addWrap'));
+  if (!f.drawn) { for (let i = 0; i < boards.length; i++) select(i, false); f.drawn = true; } // first render of each artboard
+  select(f.active, false);
+  renderFiles();
+  requestAnimationFrame(() => boards[active].el.scrollIntoView({ inline: 'center', block: 'nearest' }));
+}
+function renderFiles() {
+  const list = $('files');
+  list.innerHTML = '';
+  for (const f of files) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.setAttribute('aria-pressed', f === file);
+    b.innerHTML = `<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span></span><small>${f.boards.length}</small>`;
+    b.querySelector('span').textContent = f.title;
+    b.title = f.title;
+    b.addEventListener('click', () => openFile(f));
+    list.append(b);
+  }
 }
 // save: store the outgoing post's settings first (false when it was just removed or overwritten).
 function select(i, save = true) {
@@ -743,11 +858,14 @@ function select(i, save = true) {
   active = i;
   const b = boards[i];
   canvas = b.canvas; ctx = canvas.getContext('2d');
+  kind = b.kind || 'social'; document.body.dataset.kind = kind;
+  tqQuote.innerHTML = b.quote || ''; tqAttr.innerHTML = b.attr || '';
   photo = b.photo; focus = { ...b.focus }; $('zoom').value = b.zoom; titleEl.innerHTML = b.title;
   Object.assign(state, b.state); g0 = { ...b.g0 }; g1 = { ...b.g1 }; $('gDark').value = b.gDark; $('insetH').value = b.insetH;
   for (const x of boards) x.el.classList.toggle('selected', x === b);
   canvas.parentNode.append($('gradUi'));
   $('downloadAll').hidden = boards.length < 2;
+  if (file) file.active = i;
   $('downloadAll').querySelector('span').textContent = `Export all ${boards.length}`;
   showThumb();
   draw();
@@ -762,14 +880,49 @@ function removeBoard(i) {
   boards.splice(i, 1);
   if (active > i || (wasActive && active >= boards.length)) active = Math.max(0, active - 1);
   select(active, false);
+  renderFiles();
 }
-$('addBoard').addEventListener('click', () => {
-  const post = { ...snapshot(), photo: null, focus: { x: 0.5, y: 0.4 }, zoom: 100, title: 'Write a headline' };
-  Object.assign(boards[active], snapshot());
-  addBoard(post);
-  select(boards.length - 1, false);
-  boards[active].el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+function toggleMenu(open) {
+  $('addMenu').hidden = !open;
+  $('addBoard').setAttribute('aria-expanded', open);
+  if (!open) return;
+  $('quoteHint').textContent = file.story ? 'Finds another quote in this story' : 'A quote on the cream card';
+  $('addMenu').querySelector('button').focus();
+}
+$('addBoard').addEventListener('click', () => toggleMenu($('addMenu').hidden));
+addEventListener('pointerdown', (e) => { if (!$('addWrap').contains(e.target)) toggleMenu(false); });
+$('addMenu').addEventListener('keydown', (e) => { if (e.key === 'Escape') { toggleMenu(false); $('addBoard').focus(); } });
+$('addMenu').addEventListener('click', async (e) => {
+  const item = e.target.closest('[data-kind]');
+  if (!item) return;
+  toggleMenu(false);
+  if (item.dataset.kind === 'social') {
+    newBoards([{ ...DEFAULT_POST, kind: 'social', title: 'Write a headline' }]);
+  } else await newQuotes();
 });
+function newBoards(posts) {
+  Object.assign(boards[active], snapshot());
+  const first = boards.length;
+  for (const p of posts) { addBoard(p); select(boards.length - 1, false); }
+  select(first, false);
+  renderFiles();
+  requestAnimationFrame(() => boards[first].el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }));
+}
+// Another text quote: the next quote from the file's story that isn't on a card yet, else a blank card.
+async function newQuotes() {
+  if (!file.story) { newBoards([quotePost(null)]); return; }
+  say('Looking for another quote in the story…');
+  try {
+    const res = await fetch(`${SITE}/wp-json/wp/v2/newspost?slug=${encodeURIComponent(file.story)}&_fields=content`);
+    const [item] = res.ok ? await res.json() : [];
+    const used = new Set(boards.filter((b) => b.kind === 'quote').map((b) => b.quote));
+    const next = (item ? StoryQuotes.find(item.content.rendered, 12) : []).find((q) => !used.has(escapeHtml(q.quote)));
+    newBoards([quotePost(file.story, next)]);
+    say(next ? 'Added the next quote from the story.' : 'No other quotes with a named speaker in this story. Added a blank quote.');
+  } catch {
+    newBoards([quotePost(file.story)]); say('Couldn’t reach the story. Added a blank quote.');
+  }
+}
 
 $('file').addEventListener('change', (e) => loadPhoto(e.target.files[0]));
 document.addEventListener('paste', (e) => {
@@ -833,7 +986,7 @@ function save(blob, name) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
-const fileName = (b, n) => `ngn-social-${b.slug || new Date().toISOString().slice(0, 10) + (boards.length > 1 ? `-${n + 1}` : '')}.png`;
+const fileName = (b, n) => `ngn-${b.kind === 'quote' ? 'quote' : 'social'}-${file.story || new Date().toISOString().slice(0, 10)}${boards.length > 1 ? `-${n + 1}` : ''}.png`;
 $('download').addEventListener('click', async () => {
   CanvasEdit.stop(); draw();
   save(await pngBlob(), fileName(boards[active], active));
@@ -862,15 +1015,18 @@ document.fonts.load(`40px ${FAMILY}`).then((faces) => {
   setFontStatus(kepler);
 }, () => {});
 
-addBoard(snapshot());
-select(0, false);
-applyPreset(PRESETS[0]);
-Promise.all(['400', 'italic 400', '700', 'italic 700'].map((v) => document.fonts.load(`${v} 40px ${FAMILY}`))).then(draw, draw);
+// The Bottom layout's settings, applied without drawing (no artboard exists yet).
+Object.assign(state, { preset: PRESETS[0], logo: PRESETS[0].logo, align: PRESETS[0].align });
+[g0, g1] = ((p) => [{ x: p[0], y: p[1] }, { x: p[2], y: p[3] }])(GRAD_FOR[PRESETS[0].grad]);
+const DEFAULT_POST = { ...snapshot(), kind: 'social', photo: null, focus: { x: 0.5, y: 0.4 }, zoom: 100, slug: null, story: null };
+openFile(makeFile('Untitled', null, [{ ...DEFAULT_POST }]));
+Promise.all(['400', 'italic 400', '700', 'italic 700'].map((v) => document.fonts.load(`${v} 40px ${FAMILY}`)).concat(TextQuoteCard.ready())).then(draw, draw);
 document.fonts.ready.then(draw);
 
 CanvasEdit.attach({ canvas: () => canvas, wrap: () => canvas.parentNode, root: stage, W, regions: () => regions, redraw: draw });
 const EDITOR_TOUR = [
   { target: '#toGallery', side: 'right', title: 'Back to the latest stories', body: 'Return to the grid of recent stories any time. Posts you opened stay here as artboards.' },
+  { target: '#files', side: 'right', title: 'One file per story', body: 'Each story you open gets its own file with its post and text quotes. Switch between open files here; your edits stay put.' },
   { target: '#storyForm', side: 'left', title: 'Or paste links', body: 'Paste one or more news.northeastern.edu links, one per line. Each story becomes its own post with its headline and featured image.' },
   { target: '.artboard.selected', side: 'right', title: 'Each post is an artboard', body: 'Click a post to select it; the panels edit the selected one. Click the headline to edit it in place, or click the photo to center it on the subject.' },
   { target: '#presets', side: 'right', title: 'Pick a layout', body: 'Every layout keeps the logo and headline 80px from the edges, so posts line up on the grid.' },
@@ -878,7 +1034,7 @@ const EDITOR_TOUR = [
   { target: '#corners', side: 'left', title: 'Lock the logo', body: 'Pick the corner. If the headline shares it, the headline moves out of the way.' },
   { target: '#bgMode', side: 'left', title: 'Background', body: 'Blurred backdrop pins the photo to one edge and blurs the band behind the headline.' },
   { target: '#gOn', side: 'left', title: 'Gradient', body: 'Hover the post to see two handles. Drag them to change the gradient’s direction and length.' },
-  { target: '#addBoard', side: 'left', title: 'More posts', body: 'Add a blank post here, or hover a post’s name and click × to delete it.' },
+  { target: '#addBoard', side: 'left', title: 'More posts', body: 'Add a social post or a text quote. Text quote pulls the direct quotes from the selected story and builds a card for each. Hover a post’s name and click × to delete it.' },
   { target: '#download', side: 'bottom', title: 'Export', body: 'Export PNG saves the selected post. With several posts, Export all saves every one. Click ? in the corner to see this tour again.' },
 ];
 const GALLERY_TOUR = [

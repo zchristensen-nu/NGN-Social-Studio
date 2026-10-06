@@ -49,139 +49,20 @@
 
 <script src="canvas-edit.js"></script>
 <script src="tour.js"></script>
+<script src="text-quote-render.js"></script>
 <script>
-// Frame spec from the Figma "car data - quote" template: 1080×1350 on cream, a column of brand arrows on the right,
-// Inter 48/160% quote and 40/160% attribution, 80px left inset, centered in an 872px-tall block with a 64px gap.
-const W = 1080, H = 1350, X = 80, BLOCK_TOP = 239, BLOCK_H = 872, GAP = 64;
-const Q = { size: 48, lh: 76.8, maxW: 764, color: 'rgba(7,7,7,.964)' };
-const A = { size: 40, lh: 64, maxW: 728, color: '#000' };
-const BG = '#FFFCF9', ARROW = '#F9F6F0';
-const FAMILY = '"Inter", system-ui, sans-serif';
-
-// The arrow from badge-ngn.svg, at 179px squares in two staggered columns (positions from the Figma vectors).
-const ARROW_PATH = new Path2D('M240.67 1.01L240.67 8.21L264.23 8.21L243.23 29.21L248.32 34.31L269.5 13.12L269.5 37.04L276.7 37.04L276.7 1.01Z');
-const ARROW_SIZE = 179, ARROWS = [[839, 48], [659, 227], [839, 407], [659, 586], [839, 764], [659, 943], [839, 1123]];
-
 const $ = (id) => document.getElementById(id);
 const canvas = $('card'), ctx = canvas.getContext('2d');
 const quoteEl = $('quote'), attrEl = $('attr');
+const { W } = TextQuoteCard;
 let regions = [];
 
 function say(t) { $('saveMsg').textContent = t; clearTimeout(say.timer); say.timer = setTimeout(() => { $('saveMsg').textContent = ''; }, 4000); }
 
-// rich text -> runs, with curly quotes (same approach as the other tools)
-// ponytail: third copy of these helpers; extract a shared.js if they need to change again.
-function runsFrom(el) {
-  const runs = [];
-  (function walk(node, b, i) {
-    for (const n of node.childNodes) {
-      if (n.nodeType === 3) { runs.push({ text: n.nodeValue, b, i }); continue; }
-      if (n.nodeType !== 1) continue;
-      const tag = n.tagName;
-      if (tag === 'BR') { runs.push({ text: '\n', b, i }); continue; }
-      const st = n.style || {};
-      const nb = b || tag === 'B' || tag === 'STRONG' || parseInt(st.fontWeight) >= 600 || st.fontWeight === 'bold';
-      const ni = i || tag === 'I' || tag === 'EM' || st.fontStyle === 'italic';
-      if ((tag === 'DIV' || tag === 'P') && runs.length) runs.push({ text: '\n', b, i });
-      walk(n, nb, ni);
-    }
-  })(el, false, false);
-  let prev = ' ';
-  for (const r of runs) {
-    r.text = r.text.replace(/\u00a0/g, ' ').replace(/["']/g, (q, idx, s) => {
-      const open = /[\s(\[\u2014\u2013-]/.test(idx ? s[idx - 1] : prev);
-      return q === '"' ? (open ? '\u201c' : '\u201d') : (open ? '\u2018' : '\u2019');
-    });
-    if (r.text) prev = r.text[r.text.length - 1];
-  }
-  const out = runs.filter((r) => r.text);
-  if (out.length) { out[0].text = out[0].text.replace(/^\s+/, ''); out[out.length - 1].text = out[out.length - 1].text.replace(/\s+$/, ''); }
-  return out.filter((r) => r.text);
-}
-function quoteRuns() {
-  const runs = runsFrom(quoteEl);
-  if (!runs.length) return runs;
-  if (!/^\u201c/.test(runs[0].text)) runs[0].text = '\u201c' + runs[0].text;
-  if (!/\u201d$/.test(runs[runs.length - 1].text)) runs[runs.length - 1].text += '\u201d';
-  return runs;
-}
-
-const fontFor = (r, size) => `${r.i ? 'italic ' : ''}${r.b ? 700 : 400} ${size}px ${FAMILY}`;
-
-function layout(runs, size, maxW) {
-  const words = [];
-  let cur = [];
-  const flush = () => { if (cur.length) words.push(cur); cur = []; };
-  for (const r of runs) {
-    for (const part of r.text.split(/(\n|[ \t]+)/)) {
-      if (!part) continue;
-      if (part === '\n') { flush(); words.push('\n'); }
-      else if (/^[ \t]+$/.test(part)) flush();
-      else { ctx.font = fontFor(r, size); cur.push({ text: part, font: ctx.font, w: ctx.measureText(part).width }); }
-    }
-  }
-  flush();
-  ctx.font = fontFor({}, size);
-  const space = ctx.measureText(' ').width;
-  const lines = [{ words: [], w: 0 }];
-  for (const word of words) {
-    if (word === '\n') { lines.push({ words: [], w: 0 }); continue; }
-    const ww = word.reduce((s, seg) => s + seg.w, 0);
-    const line = lines[lines.length - 1];
-    const need = line.words.length ? line.w + space + ww : ww;
-    if (line.words.length && need > maxW) lines.push({ words: [word], w: ww });
-    else { line.words.push(word); line.w = need; }
-  }
-  return { lines, space };
-}
-
-// Like CSS text-wrap: balance: the narrowest width that keeps the greedy line count, so no orphans.
-function balance(runs, size, maxW) {
-  const greedy = layout(runs, size, maxW);
-  const n = greedy.lines.length;
-  if (n < 2) return greedy;
-  let lo = maxW / 2, hi = maxW, best = greedy;
-  for (let i = 0; i < 12; i++) {
-    const mid = (lo + hi) / 2, b = layout(runs, size, mid);
-    if (b.lines.length <= n) { best = b; hi = mid; } else lo = mid;
-  }
-  return best;
-}
-
-function drawBlock(block, spec, top) {
-  ctx.fillStyle = spec.color; ctx.textBaseline = 'alphabetic';
-  ctx.font = fontFor({}, spec.size);
-  const m = ctx.measureText('Hg');
-  const asc = m.fontBoundingBoxAscent ?? spec.size * 0.8, desc = m.fontBoundingBoxDescent ?? spec.size * 0.2;
-  block.lines.forEach((line, n) => {
-    const y = top + n * spec.lh + (spec.lh - (asc + desc)) / 2 + asc;
-    let cx = X;
-    line.words.forEach((word, wi) => {
-      if (wi) cx += block.space;
-      for (const seg of word) { ctx.font = seg.font; ctx.fillText(seg.text, cx, y); cx += seg.w; }
-    });
-  });
-}
-
 function draw() {
-  ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = ARROW;
-  const s = ARROW_SIZE / 36.03;
-  for (const [ax, ay] of ARROWS) {
-    ctx.save(); ctx.translate(ax, ay); ctx.scale(s, s); ctx.translate(-240.67, -1.01); ctx.fill(ARROW_PATH); ctx.restore();
-  }
-  const q = balance(quoteRuns(), Q.size, Q.maxW);
-  const attr = runsFrom(attrEl);
-  const a = attr.length ? balance(attr, A.size, A.maxW) : null;
-  const qh = q.lines.length * Q.lh, ah = a ? GAP + a.lines.length * A.lh : 0;
-  const top = BLOCK_TOP + (BLOCK_H - qh - ah) / 2;
-  const widest = (b) => Math.max(...b.lines.map((l) => l.w));
-  // Text regions for clicking to edit on the canvas; the block being edited is drawn by the overlay instead.
-  regions = [{ editor: quoteEl, x: X, y: top, w: widest(q), h: qh, size: Q.size, lh: Q.lh, family: FAMILY, color: Q.color }];
-  if (a) regions.push({ editor: attrEl, x: X, y: top + qh + GAP, w: widest(a), h: ah - GAP, size: A.size, lh: A.lh, family: FAMILY, color: A.color });
-  if (CanvasEdit.editing !== quoteEl) drawBlock(q, Q, top);
-  if (a && CanvasEdit.editing !== attrEl) drawBlock(a, A, top + qh + GAP);
-  $('warn').hidden = qh + ah <= BLOCK_H;
+  const r = TextQuoteCard.draw(ctx, quoteEl, attrEl, CanvasEdit.editing);
+  regions = r.regions;
+  $('warn').hidden = r.fits;
 }
 
 for (const ed of [quoteEl, attrEl]) ed.addEventListener('input', draw);
@@ -220,7 +101,7 @@ $('copy').addEventListener('click', () => {
 });
 
 draw();
-Promise.all(['400', '700', 'italic 400', 'italic 700'].map((v) => document.fonts.load(`${v} 48px Inter`))).then(draw, draw);
+TextQuoteCard.ready().then(draw, draw);
 document.fonts.ready.then(draw);
 
 CanvasEdit.attach({ canvas, wrap: document.querySelector('.artboard'), W, regions: () => regions, redraw: draw });
