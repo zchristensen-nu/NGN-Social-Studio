@@ -9,11 +9,11 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700&family=Newsreader:ital,opsz,wght@0,72,400;0,72,700;1,72,400;1,72,700&display=swap">
 <link rel="stylesheet" href="studio.css">
 <style>
-/* Kepler Std (Adobe) is used when installed; local() pins the Display cut, since the family has 100+ widths and optical sizes. */
-@font-face { font-family: "QC Kepler Display"; font-weight: 400; font-style: normal; src: local("Kepler Std Display"), local("KeplerStd-Disp"); }
-@font-face { font-family: "QC Kepler Display"; font-weight: 400; font-style: italic; src: local("Kepler Std Italic Display"), local("KeplerStd-ItDisp"); }
-@font-face { font-family: "QC Kepler Display"; font-weight: 700; font-style: normal; src: local("Kepler Std Bold Display"), local("KeplerStd-BoldDisp"); }
-@font-face { font-family: "QC Kepler Display"; font-weight: 700; font-style: italic; src: local("Kepler Std Bold Italic Display"), local("KeplerStd-BoldItDisp"); }
+/* Kepler Std (Adobe) is used when installed; local() pins the Subhead cut (the social template's), since the family has 100+ widths and optical sizes. */
+@font-face { font-family: "QC Kepler Subhead"; font-weight: 400; font-style: normal; src: local("Kepler Std Subhead"), local("KeplerStd-Subh"); }
+@font-face { font-family: "QC Kepler Subhead"; font-weight: 400; font-style: italic; src: local("Kepler Std Italic Subhead"), local("KeplerStd-ItSubh"); }
+@font-face { font-family: "QC Kepler Subhead"; font-weight: 700; font-style: normal; src: local("Kepler Std Bold Subhead"), local("KeplerStd-BoldSubh"); }
+@font-face { font-family: "QC Kepler Subhead"; font-weight: 700; font-style: italic; src: local("Kepler Std Bold Italic Subhead"), local("KeplerStd-BoldItSubh"); }
 
 /* Layouts list: Figma assets-panel rows with a schematic of each preset. */
 .presets { display: grid; gap: 2px; padding: 4px 8px 12px; }
@@ -39,6 +39,9 @@
 .corners [data-v=bl] { bottom: 3px; left: 3px; } .corners [data-v=br] { bottom: 3px; right: 3px; }
 .logo-row { display: flex; gap: 12px; align-items: center; }
 #storyForm { display: grid; gap: 6px; }
+#caption { resize: vertical; font-size: 12px; line-height: 17px; white-space: pre-wrap; }
+.caption-actions { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+.note.flag { color: var(--warn); }
 /* Post kinds: the panels show only the controls the selected artboard uses */
 body[data-kind="quote"] .kind-social, body:not([data-kind="quote"]) .kind-quote { display: none; }
 .quote-note { padding: 12px 16px; }
@@ -78,7 +81,7 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
 /* The same eased bottom gradient and 80px grid as the Bottom layout, in container units (1080px = 100cqw). */
 .tile-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgb(0 0 0 / .85), rgb(0 0 0 / .67) 18%, rgb(0 0 0 / .33) 42%, rgb(0 0 0 / .08) 60%, transparent 70%); }
 .tile-art svg { position: absolute; z-index: 1; left: 7.41cqw; top: 7.41cqw; width: 5.93cqw; height: 5.93cqw; }
-.tile-head { position: absolute; z-index: 1; left: 7.41cqw; right: 7.41cqw; bottom: 7.41cqw; color: #fff; font: 400 6.67cqw/1.2 "QC Kepler Display", "Newsreader", Georgia, serif; text-wrap: balance; }
+.tile-head { position: absolute; z-index: 1; left: 7.41cqw; right: 7.41cqw; bottom: 7.41cqw; color: #fff; font: 400 6.67cqw/1.2 "QC Kepler Subhead", "Newsreader", Georgia, serif; text-wrap: balance; }
 .tile-nophoto { position: absolute; inset: 0 0 40% 0; display: grid; place-items: center; color: rgb(255 255 255 / .5); font-size: 11px; }
 .tile-open {
   position: absolute; z-index: 2; top: 50%; left: 50%; transform: translate(-50%, -40%); opacity: 0; transition: opacity .15s, transform .2s cubic-bezier(.16, 1, .3, 1);
@@ -172,6 +175,17 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
       <p class="note" id="storyMsg">Opens each story as its own file, with its post and a text quote for each quote in the story.</p>
     </section>
 
+    <section class="sec" id="captionSec" hidden>
+      <div class="sec-head"><h2>Instagram caption</h2></div>
+      <textarea class="field" id="caption" rows="11" aria-label="Instagram caption"></textarea>
+      <p class="note flag" id="captionFlag" hidden></p>
+      <div class="caption-actions">
+        <button type="button" class="btn outline" id="draftCaption"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z"/></svg>Draft with Claude</button>
+        <button type="button" class="btn outline" id="copyCaption"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>
+      </div>
+      <p class="note">Draft with Claude opens a chat with the NGN caption prompt and this story. Paste the caption back here, then copy it into Instagram.</p>
+    </section>
+
     <section class="sec kind-quote">
       <div class="sec-head"><h2 id="tqQuoteLabel">Quote</h2><div class="toolbar"><button type="button" class="btn icon fmt" data-cmd="bold" title="Bold (⌘B)" aria-label="Bold"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg></button>
           <button type="button" class="btn icon fmt" data-cmd="italic" title="Italic (⌘I)" aria-label="Italic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4h-9M14 20H5M15 4 9 20"/></svg></button></div></div>
@@ -189,8 +203,8 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
       <div class="sec-head"><h2>Photo</h2></div>
       <label class="drop">
         <span class="thumb" id="thumb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></span>
-        <span><strong>Choose or drop a photo</strong><span class="sub">Or paste with ⌘V. Click the photo on the canvas to set the focus point.</span></span>
-        <input type="file" id="file" accept="image/*">
+        <span><strong>Choose or drop a photo or video</strong><span class="sub">Or paste with ⌘V. Click the photo on the canvas to set the focus point.</span></span>
+        <input type="file" id="file" accept="image/*,video/*">
       </label>
       <div class="prop"><label for="zoom">Zoom</label><input type="range" id="zoom" min="100" max="250" value="100"><output class="val" for="zoom"></output></div>
     </section>
@@ -244,11 +258,12 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
 <script src="tour.js"></script>
 <script src="text-quote-render.js"></script>
 <script src="quotes.js"></script>
+<script src="caption.js"></script>
 <script>
 // Frame spec from the Figma "Bottom" template: 1080×1350, 80px margins, 64px logo, Kepler 72/120%.
 const W = 1080, H = 1350, M = 80, LOGO = 64, LOGO_GAP = 40, FULL_W = 920, NARROW_W = 600;
 const SIZE = 72, GRAD_STEPS = 16; // fixed by the template
-const FAMILY = '"QC Kepler Display", "Newsreader", Georgia, serif';
+const FAMILY = '"QC Kepler Subhead", "Newsreader", Georgia, serif';
 
 // The Figma template set. v: top|middle|bottom, h: left|center|right, w: full|narrow, logo corner, gradient direction.
 const PRESETS = [
@@ -397,7 +412,7 @@ function logoBox() {
 }
 
 function textBox() {
-  const p = state.preset, size = SIZE, lh = Math.round(size * 1.2);
+  const p = state.preset, size = SIZE, lh = size * 1.2; // 120%, as in the Figma template
   const maxW = state.textW ?? (p.w === 'full' ? FULL_W : NARROW_W); // textW: dragged on the canvas; null = the layout's width
   const block = balance(runsFrom(titleEl), size, maxW);
   // Position by the balanced block's real width so right- and center-anchored layouts still meet their margin.
@@ -436,8 +451,9 @@ const clampRange = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 // Cover-fit the photo into a rect, centered on the focal point, honoring zoom.
 function photoGeo(rx, ry, rw, rh) {
   const z = +$('zoom').value / 100;
-  const s = Math.max(rw / photo.naturalWidth, rh / photo.naturalHeight) * z;
-  const dw = photo.naturalWidth * s, dh = photo.naturalHeight * s;
+  const [pw, ph] = mediaSize(photo);
+  const s = Math.max(rw / pw, rh / ph) * z;
+  const dw = pw * s, dh = ph * s;
   return {
     rx, ry, rw, rh, dw, dh,
     dx: clampRange(rx + rw / 2 - focus.x * dw, rx + rw - dw, rx),
@@ -630,17 +646,42 @@ const loadImage = (src, cors) => new Promise((resolve, reject) => {
   img.onerror = reject;
   img.src = src;
 });
+// A post's background is an <img> or a muted, looping <video>; the canvas draws either.
+const isVideo = (m) => m instanceof HTMLVideoElement;
+const mediaSize = (m) => (isVideo(m) ? [m.videoWidth, m.videoHeight] : [m.naturalWidth, m.naturalHeight]);
+const loadVideo = (src) => new Promise((resolve, reject) => {
+  const v = document.createElement('video');
+  Object.assign(v, { muted: true, loop: true, playsInline: true, preload: 'auto' });
+  v.onloadeddata = () => { v.play().catch(() => {}); resolve(v); };
+  v.onerror = reject;
+  v.src = src;
+});
 const THUMB_ICON = $('thumb').innerHTML;
 function showThumb() {
   const t = $('thumb');
-  if (photo) { t.style.backgroundImage = `url("${photo.src}")`; t.textContent = ''; }
+  if (photo) {
+    let src = photo.src;
+    if (isVideo(photo)) { // a still of the current frame
+      const c = document.createElement('canvas'), [w, h] = mediaSize(photo);
+      c.width = 96; c.height = Math.round(96 * h / w); c.getContext('2d').drawImage(photo, 0, 0, c.width, c.height);
+      src = c.toDataURL('image/jpeg', 0.7);
+    }
+    t.style.backgroundImage = `url("${src}")`; t.textContent = '';
+  }
   else { t.style.backgroundImage = ''; t.innerHTML = THUMB_ICON; }
 }
-function usePhoto(img) { photo = img; $('zoom').value = 100; focus = { x: 0.5, y: 0.4 }; showThumb(); draw(); }
+function usePhoto(img) { photo = img; $('zoom').value = 100; focus = { x: 0.5, y: 0.4 }; showThumb(); updateExportLabel(); draw(); }
 function loadPhoto(file) {
-  if (!file || !file.type.startsWith('image/')) return;
-  loadImage(URL.createObjectURL(file)).then(usePhoto, () => say('That file couldn’t be opened as an image. Try a JPG, PNG or WebP.'));
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  if (file.type.startsWith('video/')) loadVideo(url).then(usePhoto, () => say('That video couldn’t be opened here. Try an MP4 or MOV.'));
+  else if (file.type.startsWith('image/')) loadImage(url).then(usePhoto, () => say('That file couldn’t be opened as an image. Try a JPG, PNG or WebP.'));
 }
+// Keep a video post moving: redraw the selected artboard every frame while its video plays.
+(function tick() {
+  if (isVideo(photo) && !photo.paused && document.body.dataset.view === 'editor') draw();
+  requestAnimationFrame(tick);
+})();
 
 // Stories come from the site's public REST API (stories are the `newspost` type).
 const SITE = 'https://news.northeastern.edu';
@@ -652,6 +693,7 @@ function storyFromApi(item) {
     title: new DOMParser().parseFromString(item.title.rendered, 'text/html').body.textContent.trim(),
     src: media?.source_url || null,
     thumb: media?.media_details?.sizes?.medium_large?.source_url || media?.source_url || null,
+    credit: Captions.credit(media?.caption?.rendered),
   };
 }
 async function fetchStory(link) {
@@ -681,7 +723,9 @@ async function buildStoryFile(st) {
     { ...DEFAULT_POST, kind: 'social', photo: img, title: escapeHtml(st.title), slug: st.slug },
     ...quotes.map((q) => quotePost(st.slug, q)),
   ];
-  return { file: makeFile(st.title, st.slug, posts), noImage: !img, quotes: quotes.length };
+  const f = makeFile(st.title, st.slug, posts);
+  Object.assign(f, { link: st.link, credit: st.credit, caption: Captions.template(st.credit) });
+  return { file: f, noImage: !img, quotes: quotes.length };
 }
 const quotePost = (story, q) => ({
   ...DEFAULT_POST, kind: 'quote', story,
@@ -839,6 +883,7 @@ function openFile(f) {
   if (!f.drawn) { for (let i = 0; i < boards.length; i++) select(i, false); f.drawn = true; } // first render of each artboard
   select(f.active, false);
   renderFiles();
+  showCaption();
   requestAnimationFrame(() => boards[active].el.scrollIntoView({ inline: 'center', block: 'nearest' }));
 }
 function renderFiles() {
@@ -870,7 +915,9 @@ function select(i, save = true) {
   $('downloadAll').hidden = boards.length < 2;
   if (file) file.active = i;
   $('downloadAll').querySelector('span').textContent = `Export all ${boards.length}`;
+  if (isVideo(photo)) photo.play().catch(() => {});
   showThumb();
+  updateExportLabel();
   draw();
 }
 function removeBoard(i) {
@@ -929,7 +976,7 @@ async function newQuotes() {
 
 $('file').addEventListener('change', (e) => loadPhoto(e.target.files[0]));
 document.addEventListener('paste', (e) => {
-  const file = [...(e.clipboardData?.files || [])].find((f) => f.type.startsWith('image/'));
+  const file = [...(e.clipboardData?.files || [])].find((f) => /^(image|video)\//.test(f.type));
   if (file) { e.preventDefault(); loadPhoto(file); return; }
   if (e.target.closest?.('[contenteditable]')) { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); }
 });
@@ -990,26 +1037,84 @@ function save(blob, name) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 const fileName = (b, n) => `ngn-${b.kind === 'quote' ? 'quote' : 'social'}-${file.story || new Date().toISOString().slice(0, 10)}${boards.length > 1 ? `-${n + 1}` : ''}.png`;
-$('download').addEventListener('click', async () => {
+const VIDEO_TYPE = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm']
+  .find((t) => window.MediaRecorder?.isTypeSupported(t));
+async function recordVideo() {
+  if (!VIDEO_TYPE) throw new Error('This browser can’t record video. Try Chrome or Safari.');
+  const v = photo;
+  v.pause(); v.loop = false; v.currentTime = 0;
+  await new Promise((r) => { v.onseeked = r; });
+  const stream = canvas.captureStream(30);
+  try { v.muted = false; for (const t of (v.captureStream?.() || v.mozCaptureStream?.())?.getAudioTracks() || []) stream.addTrack(t); } catch { /* silent export */ }
+  const rec = new MediaRecorder(stream, { mimeType: VIDEO_TYPE, videoBitsPerSecond: 10e6 });
+  const chunks = [];
+  rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+  const done = new Promise((r) => { rec.onstop = r; });
+  rec.start(250);
+  const timer = setInterval(() => say(`Recording the video… ${Math.round(v.currentTime)} of ${Math.round(v.duration)}s`), 500);
+  await v.play();
+  await new Promise((r) => { v.onended = r; });
+  clearInterval(timer);
+  rec.stop(); await done;
+  v.muted = true; v.loop = true; v.play().catch(() => {});
+  return new Blob(chunks, { type: VIDEO_TYPE.split(';')[0] });
+}
+const extFor = (blob) => (blob.type === 'image/png' ? 'png' : blob.type.includes('mp4') ? 'mp4' : 'webm');
+async function exportBoard(n) {
+  if (n !== active) select(n);
   CanvasEdit.stop(); draw();
-  save(await pngBlob(), fileName(boards[active], active));
-  say('Saved.');
+  const blob = isVideo(photo) ? await recordVideo() : await pngBlob();
+  save(blob, fileName(boards[n], n).replace(/png$/, extFor(blob)));
+  return blob;
+}
+function updateExportLabel() {
+  $('download').lastChild.textContent = isVideo(photo) && kind === 'social' ? 'Export video' : 'Export PNG';
+}
+$('download').addEventListener('click', async () => {
+  try {
+    const blob = await exportBoard(active);
+    say(blob.type.includes('webm') ? 'Saved as WebM. Instagram needs MP4; open it in Safari to export MP4, or convert it.' : 'Saved.');
+  } catch (err) { say(err.message); }
 });
 // Every artboard already holds its last render, so exporting all is just saving each canvas.
+// Images save straight from each artboard's last render; video posts are selected and recorded in turn.
 $('downloadAll').addEventListener('click', async () => {
-  CanvasEdit.stop(); draw();
-  for (const [n, b] of boards.entries()) {
-    save(await new Promise((res) => b.canvas.toBlob(res, 'image/png')), fileName(b, n));
-    await new Promise((r) => setTimeout(r, 300)); // browsers drop rapid back-to-back downloads
-  }
-  say(`Saved ${boards.length} posts.`);
+  const back = active;
+  try {
+    for (const [n, b] of boards.entries()) {
+      if (isVideo(b === boards[active] ? photo : b.photo)) await exportBoard(n);
+      else save(await new Promise((res) => b.canvas.toBlob(res, 'image/png')), fileName(b, n));
+      await new Promise((r) => setTimeout(r, 300)); // browsers drop rapid back-to-back downloads
+    }
+    say(`Saved ${boards.length} posts.`);
+  } catch (err) { say(err.message); }
+  if (active !== back) select(back);
 });
 $('copy').addEventListener('click', () => {
   CanvasEdit.stop(); draw();
+  if (isVideo(photo) && kind === 'social') { say('Copy works for images. Use Export video for this post.'); return; }
   try {
     navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob() })])
       .then(() => say('Copied.'), () => say('Right-click the post and choose "Copy Image".'));
   } catch { say('Right-click the post and choose "Copy Image".'); }
+});
+
+// The caption belongs to the story file: drafted in Claude with the team's prompt, edited and copied here.
+function showCaption() {
+  $('captionSec').hidden = !file.story;
+  if (!file.story) return;
+  $('caption').value = file.caption;
+  $('captionFlag').hidden = !file.credit.flag;
+  $('captionFlag').textContent = file.credit.flag ? `Photo credit: ${file.credit.flag}` : '';
+}
+$('caption').addEventListener('input', () => { file.caption = $('caption').value; });
+$('draftCaption').addEventListener('click', () => {
+  navigator.clipboard?.writeText(Captions.message(file.link, file.credit)).catch(() => {});
+  window.open(Captions.claudeUrl(file.link, file.credit), '_blank', 'noopener');
+  say('Opened Claude with the caption prompt and this story (also on your clipboard). Paste the caption back here.');
+});
+$('copyCaption').addEventListener('click', () => {
+  navigator.clipboard.writeText($('caption').value).then(() => say('Caption copied.'), () => { $('caption').select(); say('Press ⌘C to copy the selected caption.'); });
 });
 
 // fonts
