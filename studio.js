@@ -36,54 +36,28 @@ window.Studio = (() => {
   function fit() { if (!stage) return; fitting = true; setScale(fitScale()); }
   const zoomBy = (k, anchor) => { fitting = false; setScale(scale * k, anchor); };
 
-  // The bottom toolbar, as in Figma: Move and Hand tools, the page's own tools, then zoom. Floats at the canvas's
-  // bottom center. Tools: [{ id, label, key, icon (svg inner markup), run }].
-  const ICONS = {
-    move: '<path d="M4.04 4.69a.5.5 0 0 1 .65-.65l16 6.5a.5.5 0 0 1-.06.95l-6.12 1.58a2 2 0 0 0-1.44 1.43l-1.58 6.13a.5.5 0 0 1-.95.06z"/>',
-    hand: '<path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>',
-  };
-  let hand = false;
-  function setTool(t) {
-    hand = t === 'hand';
-    stage.classList.toggle('panning', hand);
-    document.querySelectorAll('.dock [data-tool]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.tool === t));
-  }
-  function initZoom(tools) {
+  function initZoom() {
     stage = $('.stage');
     if (!stage) return;
     const bar = document.createElement('div');
-    bar.className = 'dock'; bar.setAttribute('role', 'toolbar'); bar.setAttribute('aria-label', 'Tools');
-    const tool = (id, label, key, icon) => `<button type="button" class="tool" data-tool="${id}" data-tip="${label}" data-key="${key}" aria-label="${label}"><svg class="i" viewBox="0 0 24 24">${icon}</svg></button>`;
-    bar.innerHTML = `${tool('move', 'Move', 'V', ICONS.move)}${tool('hand', 'Hand tool', 'H', ICONS.hand)}
-      ${tools.length ? `<span class="dock-sep"></span>${tools.map((t) => `<button type="button" class="tool" data-run="${t.id}" data-tip="${t.label}" data-key="${t.key}" aria-label="${t.label}"><svg class="i" viewBox="0 0 24 24">${t.icon}</svg></button>`).join('')}` : ''}
-      <span class="dock-sep"></span>
-      <button type="button" class="tool" data-z="out" data-tip="Zoom out" data-key="${mod} −" aria-label="Zoom out"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    bar.className = 'zoom-bar';
+    bar.innerHTML = `<button type="button" class="btn icon" data-z="out" data-tip="Zoom out" data-key="${mod} −" aria-label="Zoom out"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
       <button type="button" class="zoom-pct" id="zoomPct" data-tip="Zoom to fit" data-key="⇧ 1">100%</button>
-      <button type="button" class="tool" data-z="in" data-tip="Zoom in" data-key="${mod} +" aria-label="Zoom in"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>`;
+      <button type="button" class="btn icon" data-z="in" data-tip="Zoom in" data-key="${mod} +" aria-label="Zoom in"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>`;
     document.body.append(bar);
+    // Pinned to the canvas's bottom-right corner.
     const pin = () => {
       const r = stage.getBoundingClientRect();
       bar.hidden = !r.width || getComputedStyle(stage).display === 'none';
-      bar.style.left = `${r.left + r.width / 2 - bar.offsetWidth / 2}px`;
-      bar.style.top = `${r.bottom - bar.offsetHeight - 14}px`;
+      bar.style.left = `${r.right - bar.offsetWidth - 16}px`;
+      bar.style.top = `${r.bottom - bar.offsetHeight - 16}px`;
     };
     addEventListener('resize', pin);
     addEventListener('studio:view', pin);
     bar.addEventListener('click', (e) => {
       const b = e.target.closest('button'); if (!b) return;
-      if (b.dataset.tool) setTool(b.dataset.tool);
-      else if (b.dataset.run) tools.find((t) => t.id === b.dataset.run).run();
-      else if (b.id === 'zoomPct') fit();
-      else zoomBy(b.dataset.z === 'in' ? 1.25 : 0.8);
+      if (b.id === 'zoomPct') fit(); else zoomBy(b.dataset.z === 'in' ? 1.25 : 0.8);
     });
-    addEventListener('keydown', (e) => {
-      if (typing(document.activeElement) || e.metaKey || e.ctrlKey || e.altKey || !stage.getClientRects().length) return;
-      if (e.key === 'v' || e.key === 'V') setTool('move');
-      if (e.key === 'h' || e.key === 'H') setTool('hand');
-      const t = tools.find((x) => x.key.toLowerCase() === e.key.toLowerCase());
-      if (t) { e.preventDefault(); t.run(); }
-    });
-    setTool('move');
     // ⌘/Ctrl + wheel and trackpad pinch (which arrives as ctrl+wheel) zoom around the pointer.
     stage.addEventListener('wheel', (e) => {
       if (!e.ctrlKey && !e.metaKey) return;
@@ -95,9 +69,9 @@ window.Studio = (() => {
     addEventListener('keydown', (e) => {
       if (e.code === 'Space' && !typing(document.activeElement) && !e.repeat) { space = true; stage.classList.add('panning'); e.preventDefault(); }
     });
-    addEventListener('keyup', (e) => { if (e.code === 'Space') { space = false; if (!pan && !hand) stage.classList.remove('panning'); } });
+    addEventListener('keyup', (e) => { if (e.code === 'Space') { space = false; if (!pan) stage.classList.remove('panning'); } });
     stage.addEventListener('pointerdown', (e) => {
-      if (!(space || hand || e.button === 1)) return;
+      if (!(space || e.button === 1)) return;
       e.preventDefault(); e.stopImmediatePropagation();
       pan = { x: e.clientX, y: e.clientY, l: stage.scrollLeft, t: stage.scrollTop };
       stage.setPointerCapture(e.pointerId); stage.classList.add('grabbing');
@@ -108,7 +82,7 @@ window.Studio = (() => {
     });
     stage.addEventListener('pointerup', () => {
       if (!pan) return;
-      pan = null; stage.classList.remove('grabbing'); if (!space && !hand) stage.classList.remove('panning');
+      pan = null; stage.classList.remove('grabbing'); if (!space) stage.classList.remove('panning');
     });
     addEventListener('resize', () => { if (fitting && !echoing) setScale(fitScale()); });
     new ResizeObserver(() => { if (fitting) setScale(fitScale()); pin(); }).observe(stage);
@@ -198,7 +172,6 @@ window.Studio = (() => {
   // The shortcut sheet, opened with ? and closed with Esc or a click outside.
   function initSheet(shortcuts) {
     const all = [...shortcuts,
-      ['Move tool', 'V'], ['Hand tool (pan)', 'H'],
       ['Zoom in / out', `${mod} + / ${mod} −`], ['Zoom with the pointer', `${mod} + scroll, or pinch`], ['Zoom to fit', '⇧ 1'],
       ['Actual size', '⇧ 0'], ['Pan', 'Space + drag'], ['Show this list', '?']];
     const sheet = document.createElement('div');
@@ -220,52 +193,11 @@ window.Studio = (() => {
     });
   }
 
-  // A personal touch: the editor greets you by name. Asked once from the avatar, kept in this browser only.
-  const NAME_KEY = 'ngn-studio-name';
-  const AVATAR_COLORS = ['#e8a33d', '#4c9f70', '#5b7fd6', '#c2577a', '#8a6bd1', '#d9663b', '#2f9e9e'];
-  const getName = () => { try { return localStorage.getItem(NAME_KEY) || ''; } catch { return ''; } };
-  function initAvatar() {
-    const actions = $('.top-actions');
-    if (!actions) return;
-    const wrap = document.createElement('div');
-    wrap.className = 'avatar-wrap';
-    wrap.innerHTML = `<button type="button" class="avatar" id="avatar" aria-haspopup="dialog"></button>
-      <form class="avatar-pop" id="avatarPop" hidden><label for="avatarName">What should we call you?</label>
-      <input class="field" id="avatarName" autocomplete="given-name" placeholder="Your first name"><p class="note">Only saved in this browser.</p></form>`;
-    actions.append(wrap);
-    const btn = $('#avatar'), pop = $('#avatarPop'), input = $('#avatarName');
-    const paint = () => {
-      const n = getName();
-      btn.textContent = n ? n.trim()[0].toUpperCase() : '';
-      if (!n) btn.innerHTML = '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
-      btn.style.background = n ? AVATAR_COLORS[[...n].reduce((h, c) => h + c.charCodeAt(0), 0) % AVATAR_COLORS.length] : '';
-      btn.classList.toggle('named', !!n);
-      btn.dataset.tip = n ? `${n} (that’s you)` : 'Add your name';
-      btn.setAttribute('aria-label', btn.dataset.tip);
-    };
-    btn.addEventListener('click', () => { pop.hidden = !pop.hidden; if (!pop.hidden) { input.value = getName(); input.focus(); } });
-    pop.addEventListener('submit', (e) => {
-      e.preventDefault();
-      try { localStorage.setItem(NAME_KEY, input.value.trim()); } catch { /* private window */ }
-      pop.hidden = true; paint(); dispatchEvent(new Event('studio:name'));
-    });
-    addEventListener('pointerdown', (e) => { if (!wrap.contains(e.target)) pop.hidden = true; });
-    addEventListener('keydown', (e) => { if (e.key === 'Escape') pop.hidden = true; });
-    paint();
-  }
-  function greeting() {
-    const h = new Date().getHours(), part = h < 5 ? 'Working late' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-    const n = getName().trim().split(/\s+/)[0];
-    return n ? `${part}, ${n}` : part;
-  }
-
   return {
-    greeting,
     mod, typing,
-    init({ artHeight, artWidth = 0, shortcuts = [], tools = [] }) {
+    init({ artHeight, artWidth = 0, shortcuts = [] }) {
       artH = artHeight; artW = artWidth;
-      initAvatar();
-      initZoom(tools);
+      initZoom();
       initNumbers();
       initSheet(shortcuts);
       initTips();

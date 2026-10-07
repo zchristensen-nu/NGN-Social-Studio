@@ -16,20 +16,6 @@
 @font-face { font-family: "QC Kepler Subhead"; font-weight: 700; font-style: normal; src: local("Kepler Std Bold Subhead"), local("KeplerStd-BoldSubh"); }
 @font-face { font-family: "QC Kepler Subhead"; font-weight: 700; font-style: italic; src: local("Kepler Std Bold Italic Subhead"), local("KeplerStd-BoldItSubh"); }
 
-/* Layouts list: Figma assets-panel rows with a schematic of each preset. */
-.presets { display: grid; gap: 2px; padding: 4px 8px 12px; }
-.presets button { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 8px; border: 0; border-radius: var(--r); background: none; color: var(--text); font: 400 12px var(--ui); text-align: left; cursor: pointer; }
-.presets button:hover { background: var(--field); }
-.presets button[aria-pressed="true"] { background: var(--sel-soft); color: var(--sel-text); font-weight: 500; }
-.mini { position: relative; width: 28px; height: 35px; flex: none; border-radius: 3px; overflow: hidden; color: var(--text-3); background: var(--field); box-shadow: inset 0 0 0 1px var(--line); transition: color .12s, box-shadow .12s; }
-/* Three text bars, the last one short, aligned the way the preset aligns its headline. */
-.mini i { position: absolute; height: 8px; --bar: linear-gradient(currentColor, currentColor);
-  background: var(--bar) 0 0 / 100% 2px no-repeat, var(--bar) 0 3px / 100% 2px no-repeat, var(--bar) 0 6px / 60% 2px no-repeat; }
-.mini[data-align="center"] i { background-position: 50% 0, 50% 3px, 50% 6px; }
-.mini b { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
-.presets button:hover .mini { color: var(--text-2); }
-.presets button[aria-pressed="true"] .mini { color: var(--sel); box-shadow: inset 0 0 0 1px var(--sel); background: var(--chrome); }
-.panel.left .sec-head { padding: 12px 16px 4px; }
 /* Logo corner: a constraint widget like Figma's, four targets on a frame. */
 .corners { position: relative; width: 56px; height: 70px; border-radius: 4px; background: var(--field); flex: none; }
 .corners button { position: absolute; width: 22px; height: 22px; border: 0; background: none; cursor: pointer; display: grid; place-items: center; border-radius: 4px; }
@@ -42,7 +28,22 @@
 #storyForm { display: grid; gap: 6px; }
 /* Post kinds: the panels show only the controls the selected artboard uses */
 body:not([data-kind="social"]) .kind-social, body:not([data-kind="quote"]) .kind-quote, body:not([data-kind="end"]) .kind-end, body[data-kind="social"] .kind-fixed { display: none; }
-.quote-note { padding: 12px 16px; }
+/* Layout: Figma's alignment grid. Each cell is where the headline sits; the picked cell (and the hovered one) shows
+   three text lines aligned to its column, the others a dot. */
+.layout-row { display: flex; gap: 12px; align-items: flex-start; }
+.place { flex: none; display: grid; grid-template-columns: repeat(3, 28px); grid-template-rows: repeat(3, 24px); padding: 4px; border-radius: var(--r); background: var(--field); }
+.place button { position: relative; display: grid; place-items: center; border: 0; border-radius: 4px; background: none; color: var(--text-3); cursor: pointer; --x: 0; }
+.place button[data-v$="center"] { --x: 50%; }
+.place button[data-v$="right"] { --x: 100%; }
+.place button::before { content: ""; width: 2px; height: 2px; border-radius: 50%; background: currentColor; }
+.place button:hover::before, .place button[aria-pressed="true"]::before {
+  width: 14px; height: 9px; border-radius: 0; --bar: linear-gradient(currentColor, currentColor);
+  background: var(--bar) var(--x) 0 / 64% 2px no-repeat, var(--bar) var(--x) 3.5px / 100% 2px no-repeat, var(--bar) var(--x) 7px / 50% 2px no-repeat;
+}
+.place button:hover { color: var(--text-2); }
+.place button[aria-pressed="true"] { color: var(--sel); }
+.layout-side { display: grid; gap: 8px; flex: 1; min-width: 0; }
+.layout-side .seg button { padding: 0 4px; }
 .add-wrap { position: relative; flex: none; align-self: stretch; margin-top: 24px; display: flex; }
 .add-wrap .add-board { margin-top: 0; }
 .add-board[aria-expanded="true"] { border-color: var(--sel); color: var(--sel-text); background: var(--sel-soft); }
@@ -144,14 +145,7 @@ body[data-view="gallery"] .top-actions .btn { display: none; }
   <div class="gallery-foot"><button type="button" class="btn outline" id="galleryMore">Load older stories</button></div>
 </section>
 
-<main class="workspace with-left">
-  <aside class="panel left kind-social-panel" aria-label="Layouts">
-    <div class="back-row"><button type="button" class="btn" id="toGallery"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Latest stories</button></div>
-    <div class="kind-social"><div class="sec-head"><h2>Layouts</h2></div>
-    <div class="presets" id="presets"></div></div>
-    <p class="note kind-fixed quote-note">This card uses one fixed layout, so there’s nothing to choose here.</p>
-  </aside>
-
+<main class="workspace">
   <section class="stage" id="stage" aria-label="Canvas">
     <div class="boards" id="boards">
       <div class="add-wrap" id="addWrap">
@@ -198,6 +192,17 @@ body[data-view="gallery"] .top-actions .btn { display: none; }
           <button type="button" class="btn icon fmt" data-cmd="italic" title="Italic (⌘I)" aria-label="Italic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4h-9M14 20H5M15 4 9 20"/></svg></button></div></div>
       <div class="editor" id="tqAttr" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="tqAttrLabel"></div>
       <p class="note">Check the name and title against the story before you post.</p>
+    </section>
+
+    <section class="sec kind-social">
+      <div class="sec-head"><h2>Layout</h2></div>
+      <div class="layout-row">
+        <div class="place" id="place" role="group" aria-label="Headline position"><button type="button" data-v="top-left" title="Top left" aria-label="Headline top left"></button><button type="button" data-v="top-center" title="Top center" aria-label="Headline top center"></button><button type="button" data-v="top-right" title="Top right" aria-label="Headline top right"></button><button type="button" data-v="middle-left" title="Middle left" aria-label="Headline middle left"></button><button type="button" data-v="middle-center" title="Middle center" aria-label="Headline middle center"></button><button type="button" data-v="middle-right" title="Middle right" aria-label="Headline middle right"></button><button type="button" data-v="bottom-left" title="Bottom left" aria-label="Headline bottom left"></button><button type="button" data-v="bottom-center" title="Bottom center" aria-label="Headline bottom center"></button><button type="button" data-v="bottom-right" title="Bottom right" aria-label="Headline bottom right"></button></div>
+        <div class="layout-side">
+          <div class="seg" id="width"><button type="button" data-v="full">Full width</button><button type="button" data-v="narrow">Narrow</button></div>
+          <p class="note">Headline and logo stay 80px from every edge.</p>
+        </div>
+      </div>
     </section>
 
     <section class="sec kind-social">
@@ -591,26 +596,33 @@ function draw() {
 function syncPressed() {
   for (const [id, val] of [['align', state.align], ['color', state.color], ['bgMode', state.bg], ['corners', state.logo], ['gOn', state.gOn]])
     for (const b of $(id).querySelectorAll('button')) b.setAttribute('aria-pressed', b.dataset.v === val);
-  for (const b of $('presets').querySelectorAll('button')) b.setAttribute('aria-pressed', b.dataset.name === state.preset.name);
+  for (const b of $('place').querySelectorAll('button')) b.setAttribute('aria-pressed', b.dataset.v === `${state.preset.v}-${state.preset.h}`);
+  for (const b of $('width').querySelectorAll('button')) b.setAttribute('aria-pressed', b.dataset.v === state.preset.w);
 }
 
+// A cell of the alignment grid plus a width is one of the Figma template's layouts; the few combinations the
+// template set doesn't name get the same defaults its siblings use.
+function layoutFor(v, h, w) {
+  return PRESETS.find((p) => p.v === v && p.h === h && p.w === w) || {
+    name: `${v} ${h} ${w}`, v, h, w, align: h === 'center' ? 'center' : 'left',
+    logo: v === 'top' ? 'br' : 'tl', grad: v === 'middle' ? (h === 'center' ? 'even' : h) : v,
+  };
+}
+$('place').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  const [v, h] = b.dataset.v.split('-');
+  applyPreset(layoutFor(v, h, state.preset.w));
+});
+$('width').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  applyPreset(layoutFor(state.preset.v, state.preset.h, b.dataset.v));
+});
 function applyPreset(p) {
   state.preset = p; state.logo = p.logo; state.align = p.align; state.textW = null;
   const [ax, ay, bx, by] = GRAD_FOR[p.grad]; g0 = { x: ax, y: ay }; g1 = { x: bx, y: by };
   draw();
 }
 
-// Preset thumbnails drawn from the same definitions the renderer uses.
-for (const p of PRESETS) {
-  const btn = document.createElement('button');
-  btn.type = 'button'; btn.dataset.name = p.name; btn.title = p.name; // a tooltip where a variation hides the label
-  const tw = p.w === 'full' ? 85 : 55, tx = p.h === 'left' ? 7.5 : p.h === 'right' ? 92.5 - tw : (100 - tw) / 2;
-  const ty = p.v === 'top' ? 'top: 8%' : p.v === 'bottom' ? 'bottom: 8%' : 'top: 42%';
-  const lx = p.logo[1] === 'l' ? 'left: 7%' : 'right: 7%', ly = p.logo[0] === 't' ? 'top: 6%' : 'bottom: 6%';
-  btn.innerHTML = `<span class="mini" data-align="${p.align}"><i style="left:${tx}%;width:${tw}%;${ty}"></i><b style="${lx};${ly}"></b></span><span>${p.name}</span>`;
-  btn.addEventListener('click', () => applyPreset(p));
-  $('presets').append(btn);
-}
 
 const seg = (id, key) => $(id).addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
@@ -817,7 +829,6 @@ function renderGallery() {
     grid.append(tile);
   }
   if (!shown.length) grid.innerHTML = `<p class="gallery-empty">No stories match “${escapeHtml(q)}”. Older stories may match: try Load older stories.</p>`;
-  $('galleryTitle').textContent = Studio.greeting();
   $('galleryStatus').textContent = galleryLine();
 }
 $('gallerySearch').addEventListener('input', renderGallery);
@@ -865,7 +876,6 @@ function showView(v) {
 }
 $('galleryRefresh').addEventListener('click', () => refreshGallery());
 $('galleryMore').addEventListener('click', () => refreshGallery(true));
-$('toGallery').addEventListener('click', () => showView('gallery'));
 $('crumbHome').addEventListener('click', () => showView('gallery'));
 function updateCrumbs() {
   const editing = document.body.dataset.view === 'editor' && file;
@@ -881,7 +891,6 @@ function galleryLine() {
   return `${n ? `${n} new ${n === 1 ? 'story' : 'stories'} since you last looked. ` : 'Here’s what’s new on news.northeastern.edu. '}Checked ${ago(gallery.updated || new Date())}.`;
 }
 setInterval(() => { if (document.body.dataset.view === 'gallery') $('galleryStatus').textContent = galleryLine(); }, 60 * 1000);
-addEventListener('studio:name', () => { if (gallery.updated) $('galleryTitle').textContent = Studio.greeting(); });
 
 
 // Files hold artboards; each artboard keeps its own settings and the panels edit the selected one.
@@ -1162,10 +1171,10 @@ document.fonts.ready.then(draw);
 
 CanvasEdit.attach({ canvas: () => canvas, wrap: () => canvas.parentNode, root: stage, W, regions: () => regions, redraw: draw });
 const EDITOR_TOUR = [
-  { target: '#toGallery', side: 'right', title: 'Back to the latest stories', body: 'Return to the grid any time. Stories you’ve opened are marked Open there and keep your edits.' },
+  { target: '#crumbHome', side: 'bottom', title: 'Back to the latest stories', body: 'Return to the grid any time. Stories you’ve opened are marked Open there and keep your edits.' },
   { target: '#storyForm', side: 'left', title: 'Or paste links', body: 'Paste one or more news.northeastern.edu links, one per line. Each story becomes its own post with its headline and featured image.' },
   { target: '.artboard.selected', side: 'right', title: 'Each post is an artboard', body: 'Click a post to select it; the panels edit the selected one. Click the headline to edit it in place, or click the photo to center it on the subject.' },
-  { target: '#presets', side: 'right', title: 'Pick a layout', body: 'Every layout keeps the logo and headline 80px from the edges, so posts line up on the grid.' },
+  { target: '#place', side: 'left', title: 'Place the headline', body: 'Click where the headline goes, then pick full width or narrow. The headline and logo always stay 80px from the edges, so posts line up on the grid.' },
   { target: '#title', side: 'left', title: 'The headline', body: 'Lines balance automatically so no word sits alone. Select words and click B or I to style them.' },
   { target: '#corners', side: 'left', title: 'Lock the logo', body: 'Pick the corner. If the headline shares it, the headline moves out of the way.' },
   { target: '#bgMode', side: 'left', title: 'Background', body: 'Blurred backdrop pins the photo to one edge and blurs the band behind the headline.' },
@@ -1213,14 +1222,14 @@ addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight' || e.key === ']') { e.preventDefault(); go(active + 1); }
   if (e.key === 'ArrowLeft' || e.key === '[') { e.preventDefault(); go(active - 1); }
   if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); removeBoard(active); }
-});
-const m = Studio.mod;
-Studio.init({ artHeight: H, tools: [
-  { id: 'new', label: 'New slide', key: 'N', icon: '<path d="M12 5v14M5 12h14"/>', run: () => {
+  if (e.key === 'n' || e.key === 'N') {
+    e.preventDefault();
     $('addBoard').scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     setTimeout(() => toggleMenu(true), 250);
-  } },
-], shortcuts: [
+  }
+});
+const m = Studio.mod;
+Studio.init({ artHeight: H, shortcuts: [
   ['New slide', 'N'],
   ['Undo / redo', `${m} Z / ${m} ⇧ Z`], ['Next / previous slide', '→ / ←'], ['Delete the selected slide', '⌫'],
   ['Export the selected slide', `${m} E`], ['Export all slides', `${m} ⇧ E`], ['Bold / italic while editing text', `${m} B / ${m} I`],
