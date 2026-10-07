@@ -77,10 +77,6 @@ svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor;
 .tabs a:hover { color: var(--text); }
 .tabs a[aria-current] { background: var(--raised); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
 .top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
-.font-chip { display: flex; align-items: center; gap: 6px; color: var(--text-2); white-space: nowrap; padding: 0 6px; cursor: default; }
-.font-chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--text-3); }
-.font-chip[data-ok="true"]::before { background: var(--ok); }
-.font-chip[data-ok="false"]::before { background: var(--warn); }
 
 /* buttons */
 .btn {
@@ -110,6 +106,10 @@ svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor;
 }
 .artboard { display: grid; gap: 8px; max-width: 100%; }
 .frame-label { display: flex; justify-content: space-between; gap: 16px; color: var(--text-2); font-size: 11px; }
+/* The label never sets the artboard's width (zero intrinsic width, then stretched to the canvas), so zooming out
+   shrinks slides, gaps and labels together; the name truncates and the size hides when there's no room. */
+.artboard .frame-label { width: 0; min-width: 100%; overflow: hidden; }
+.stage.zoom-small .frame-label > span:last-child { display: none; }
 .frame-label span:last-child { color: var(--text-3); font-variant-numeric: tabular-nums; }
 .artboard canvas {
   display: block; width: auto; height: var(--art-h, auto); max-width: none;
@@ -239,7 +239,7 @@ select:hover { border-color: var(--line); }
 .wrap-handle.right { right: -11px; }
 
 /* Several artboards side by side; the selected one carries Figma's selection outline */
-.boards { display: flex; gap: 56px; align-items: flex-start; margin: auto; }
+.boards { display: flex; gap: clamp(16px, calc(var(--art-h, 900px) * .06), 56px); align-items: flex-start; margin: auto; }
 .boards .artboard { flex: none; }
 .artboard.selected canvas { outline: 2px solid var(--sel); outline-offset: 0; }
 .artboard.selected .frame-label span:first-child { color: var(--sel-text); }
@@ -249,8 +249,9 @@ select:hover { border-color: var(--line); }
 .frame-label > span:first-child { display: flex; gap: 6px; align-items: center; min-width: 0; cursor: default; }
 .frame-label > span:last-child { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .frame-label .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+.frame-label > span:first-child { flex: 1 1 auto; overflow: hidden; }
 .add-board {
-  flex: none; align-self: stretch; margin-top: 24px; width: 120px; display: grid; place-items: center; align-content: center; gap: 6px;
+  flex: none; align-self: stretch; margin-top: 24px; width: clamp(56px, calc(var(--art-h, 900px) * .17), 120px); display: grid; place-items: center; align-content: center; gap: 6px;
   border: 1.5px dashed var(--line); border-radius: 4px; background: none; color: var(--text-2); font: 500 12px var(--ui); cursor: pointer;
 }
 .add-board:hover { border-color: var(--sel); color: var(--sel-text); background: var(--sel-soft); }
@@ -344,8 +345,7 @@ body.scrubbing, body.scrubbing * { cursor: ew-resize !important; user-select: no
   body { display: block; height: auto; }
   .topbar { grid-template-columns: 1fr auto; padding-block: 8px; height: auto; position: sticky; top: 0; z-index: 2; }
   .topbar .tabs { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
-  .font-chip { display: none; }
-  .workspace, .workspace.with-left { display: block; }
+    .workspace, .workspace.with-left { display: block; }
   .stage { padding: 24px 16px 64px; }
   .artboard canvas { height: auto; max-height: 70vh; max-width: 100%; }
   .zoom-bar, .variant-pick, .crumbs { display: none; }

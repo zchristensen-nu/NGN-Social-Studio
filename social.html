@@ -76,7 +76,7 @@ body.opening .tile:not(.opening) { opacity: .6; pointer-events: none; transition
 .crumbs.home button:hover { background: none; }
 /* Views: the latest-stories grid is home; the editor opens a story as an artboard */
 body[data-view="gallery"] main.workspace, body[data-view="editor"] .gallery { display: none; }
-body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chip { display: none; }
+body[data-view="gallery"] .top-actions .btn { display: none; }
 .gallery { min-height: 0; overflow-y: auto; padding: 32px 40px 72px; }
 .gallery-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; max-width: 1400px; margin: 0 auto 24px; }
 .gallery-head h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
@@ -127,7 +127,6 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
   <div class="brand"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#000"/><path d="M0,73.07V1.06H12.99L52.81,50.48V1.06h14.32V73.07h-13.2L14.32,24.18v48.89H0Z" fill="#fff" transform="translate(15.3 15.18) scale(0.21955) translate(0 -1.06)"/><path d="M240.67 1.01L240.67 8.21L264.23 8.21L243.23 29.21L248.32 34.31L269.5 13.12L269.5 37.04L276.7 37.04L276.7 1.01Z" fill="#cf2b28" transform="translate(32.49 15.18) scale(0.43880) translate(-240.67 -1.01)"/><path d="M78.46,37.06C78.46,16.01,94.36,0,115.41,0c12.46,0,23.97,5.94,31.55,16.91l-11.29,8.06c-5.62-8.48-12.94-11.72-20.26-11.72-13.1,0-22.27,9.86-22.27,23.81s9.54,23.81,22.64,23.81c11.98,0,18.72-7.05,20.36-14.69h-21.79v-12.35h36.27c.21,1.86,.26,3.98,.26,5.78,0,18.51-13.04,34.52-35.1,34.52s-37.33-16.01-37.33-37.06Z" fill="#fff" transform="translate(14.3 32.78) scale(0.22393) translate(-78.46 0)"/><path d="M162.22,73.07V1.06h12.99l39.82,49.42V1.06h14.32V73.07h-13.2l-39.61-48.89v48.89h-14.32Z" fill="#fff" transform="translate(33.57 33.34) scale(0.21955) translate(-162.22 -1.06)"/></svg><span>Studio</span><span class="crumbs" id="crumbs"><span aria-hidden="true">/</span><button type="button" id="crumbHome">Latest stories</button><span class="crumb-sep" aria-hidden="true">/</span><span class="here" id="crumbHere"></span></span></div>
   <nav class="tabs" aria-label="Tools"><a href="./"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/><path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/></svg>Quote card</a><a href="social.html" aria-current="page"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 17h8M8 14h5"/></svg>Social post</a></nav>
   <div class="top-actions">
-    <span class="font-chip" id="fontStatus"></span>
     <button type="button" class="btn outline" id="copy"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy</button>
     <button type="button" class="btn outline" id="downloadAll" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg><span>Export all</span></button>
     <button type="button" class="btn primary" id="download"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg>Export PNG</button>
@@ -288,12 +287,6 @@ const $ = (id) => document.getElementById(id);
 function paintRanges() {
   for (const r of document.querySelectorAll('input[type=range]'))
     r.style.setProperty('--p', ((r.value - r.min) / (r.max - r.min)) * 100 + '%');
-}
-function setFontStatus(ok) {
-  const el = $('fontStatus');
-  el.dataset.ok = ok;
-  el.textContent = ok ? 'Kepler Std' : 'Substitute font';
-  el.title = ok ? 'Kepler Std is active on this computer.' : 'Kepler Std isn’t installed here, so Newsreader stands in. Activate Kepler Std in Adobe Fonts for an exact match.';
 }
 
 let canvas, ctx; // the selected artboard's canvas; see select()
@@ -691,7 +684,7 @@ function showThumb() {
   }
   else { t.style.backgroundImage = ''; t.innerHTML = THUMB_ICON; }
 }
-function usePhoto(img) { photo = img; $('zoom').value = 100; focus = { x: 0.5, y: 0.4 }; showThumb(); updateExportLabel(); draw(); }
+function usePhoto(img) { photo = img; $('zoom').value = 100; focus = { x: 0.5, y: 0.4 }; showThumb(); updateExportLabel(); draw(); Studio.ambient(canvas); }
 function loadPhoto(file) {
   if (!file) return;
   const url = URL.createObjectURL(file);
@@ -948,6 +941,7 @@ function select(i, save = true) {
   showThumb();
   updateExportLabel();
   draw();
+  Studio.ambient(canvas); // the Stage look lights the canvas with the slide's color
   baseline(b);
 }
 function removeBoard(i) {
@@ -1147,11 +1141,6 @@ $('copy').addEventListener('click', () => {
 });
 
 
-// fonts
-document.fonts.load(`40px ${FAMILY}`).then((faces) => {
-  const kepler = faces.some((f) => f.family.includes('QC Kepler') && f.status === 'loaded');
-  setFontStatus(kepler);
-}, () => {});
 
 // The Bottom layout's settings, applied without drawing (no artboard exists yet).
 Object.assign(state, { preset: PRESETS[0], logo: PRESETS[0].logo, align: PRESETS[0].align });

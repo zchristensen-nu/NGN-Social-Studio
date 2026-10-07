@@ -9,21 +9,38 @@ window.Studio = (() => {
   const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
   const mod = isMac ? '⌘' : 'Ctrl';
 
-  // Layout variations: five arrangements of the same panels, chosen in the top bar and remembered per browser.
-  const VARIANTS = [['1', 'Classic'], ['2', 'Floating'], ['3', 'Dock'], ['4', 'Inspector left'], ['5', 'Focus']];
+  // Looks: the same editor dressed as different apps would build it, chosen in the top bar and remembered per browser.
+  // Each look brings its own typeface, loaded only when picked.
+  const VARIANTS = [['0', 'Original'], ['1', 'Stage'], ['2', 'Paper'], ['3', 'Pro'], ['4', 'Workspace'], ['5', 'Calm']];
+  const FONTS = {
+    1: 'Figtree:wght@400;500;600;700;800',
+    3: 'JetBrains+Mono:wght@400;500',
+    4: 'Lato:ital,wght@0,400;0,700;0,900;1,400',
+    5: 'Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600',
+  };
+  function applyVariant(v) {
+    document.documentElement.dataset.variant = v;
+    if (FONTS[v] && !document.querySelector(`link[data-look="${v}"]`)) {
+      const l = document.createElement('link');
+      l.rel = 'stylesheet'; l.dataset.look = v;
+      l.href = `https://fonts.googleapis.com/css2?family=${FONTS[v]}&display=swap`;
+      l.onload = () => dispatchEvent(new Event('resize'));
+      document.head.append(l);
+    }
+  }
   function initVariants() {
     let v = new URLSearchParams(location.search).get('v');
-    try { v = v || localStorage.getItem('ngn-studio-variant'); } catch { /* private window */ }
-    if (!VARIANTS.some(([k]) => k === v)) v = '1';
-    document.documentElement.dataset.variant = v;
+    try { v = v || localStorage.getItem('ngn-studio-look'); } catch { /* private window */ }
+    if (!VARIANTS.some(([k]) => k === v)) v = '0';
+    applyVariant(v);
     const pick = document.createElement('label');
     pick.className = 'variant-pick';
     pick.innerHTML = `<span>Look</span><select aria-label="Interface layout">${VARIANTS.map(([k, n]) => `<option value="${k}">${k} · ${n}</option>`).join('')}</select>`;
     const sel = $('select', pick);
     sel.value = v;
     sel.addEventListener('change', () => {
-      document.documentElement.dataset.variant = sel.value;
-      try { localStorage.setItem('ngn-studio-variant', sel.value); } catch { /* private window */ }
+      applyVariant(sel.value);
+      try { localStorage.setItem('ngn-studio-look', sel.value); } catch { /* private window */ }
       requestAnimationFrame(() => { fit(); dispatchEvent(new Event('resize')); });
     });
     $('.top-actions')?.prepend(pick);
@@ -43,6 +60,7 @@ window.Studio = (() => {
     const old = scale;
     scale = Math.min(2, Math.max(0.1, s));
     stage.style.setProperty('--art-h', `${Math.round(artH * scale)}px`);
+    stage.classList.toggle('zoom-small', artH * scale < 420); // slide labels drop the size when slides get small
     $('#zoomPct').textContent = `${Math.round(scale * 100)}%`;
     if (anchor) { // keep the point under the pointer still
       const k = scale / old, r = stage.getBoundingClientRect();
@@ -215,8 +233,20 @@ window.Studio = (() => {
     });
   }
 
+  // The photo's average color, for looks that light the canvas with it (Stage).
+  const probe = document.createElement('canvas');
+  probe.width = probe.height = 1;
+  function ambient(source) {
+    try {
+      const c = probe.getContext('2d', { willReadFrequently: true });
+      c.drawImage(source, 0, 0, 1, 1);
+      const [r, g, b] = c.getImageData(0, 0, 1, 1).data;
+      document.documentElement.style.setProperty('--ambient', `rgb(${r} ${g} ${b})`);
+    } catch { /* a canvas tainted by a cross-origin photo can't be read; keep the last color */ }
+  }
+
   return {
-    mod, typing,
+    mod, typing, ambient,
     init({ artHeight, artWidth = 0, shortcuts = [] }) {
       artH = artHeight; artW = artWidth;
       initVariants();
