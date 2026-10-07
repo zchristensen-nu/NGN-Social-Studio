@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700&family=Newsreader:ital,opsz,wght@0,72,400;0,72,700;1,72,400;1,72,700&display=swap">
 <link rel="stylesheet" href="studio.css">
+<link rel="stylesheet" href="variants.css">
 <style>
 /* Kepler Std (Adobe) is used when installed; local() pins the Subhead cut (the social template's), since the family has 100+ widths and optical sizes. */
 @font-face { font-family: "QC Kepler Subhead"; font-weight: 400; font-style: normal; src: local("Kepler Std Subhead"), local("KeplerStd-Subh"); }
@@ -55,6 +56,24 @@ body:not([data-kind="social"]) .kind-social, body:not([data-kind="quote"]) .kind
 .menu button svg { margin-top: 1px; color: var(--text-2); }
 .menu strong { display: block; font-weight: 500; }
 .menu small { display: block; color: var(--text-3); font-size: 11px; line-height: 15px; margin-top: 1px; }
+/* Gallery polish: skeletons while loading, photos fade in, a spinner on the story being opened */
+.tile.skeleton { pointer-events: none; }
+.tile.skeleton .tile-art, .tile.skeleton .tile-meta span { background: linear-gradient(100deg, var(--field) 30%, var(--field-hover) 50%, var(--field) 70%) 0 0 / 300% 100%; animation: shimmer 1.4s linear infinite; box-shadow: none; }
+.tile.skeleton .tile-meta span { height: 12px; border-radius: 3px; }
+.tile.skeleton .tile-meta span + span { width: 40%; }
+@keyframes shimmer { to { background-position: -150% 0; } }
+.tile-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .35s ease-out; }
+.tile-img.in { opacity: 1; }
+.tile.opening .tile-art::before { content: ""; position: absolute; z-index: 3; inset: 0; background: rgb(0 0 0 / .45); }
+.tile.opening .tile-open { opacity: 1; transform: translate(-50%, -50%); font-size: 0; width: 28px; height: 28px; padding: 0; border-radius: 50%; background: none; border: 2.5px solid rgb(255 255 255 / .35); border-top-color: #fff; animation: spin .8s linear infinite; z-index: 4; }
+@keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+body.opening .tile:not(.opening) { opacity: .6; pointer-events: none; transition: opacity .2s; }
+.gallery-search { width: 220px; flex: none; }
+.gallery-search .field { height: 28px; }
+.gallery-empty { grid-column: 1 / -1; color: var(--text-2); text-align: center; padding: 48px 0; }
+.crumbs.home .crumb-sep, .crumbs.home .here { display: none; }
+.crumbs.home button { cursor: default; color: var(--text); }
+.crumbs.home button:hover { background: none; }
 /* Views: the latest-stories grid is home; the editor opens a story as an artboard */
 body[data-view="gallery"] main.workspace, body[data-view="editor"] .gallery { display: none; }
 body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chip { display: none; }
@@ -105,7 +124,7 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#000"/><path d="M0,73.07V1.06H12.99L52.81,50.48V1.06h14.32V73.07h-13.2L14.32,24.18v48.89H0Z" fill="#fff" transform="translate(15.3 15.18) scale(0.21955) translate(0 -1.06)"/><path d="M240.67 1.01L240.67 8.21L264.23 8.21L243.23 29.21L248.32 34.31L269.5 13.12L269.5 37.04L276.7 37.04L276.7 1.01Z" fill="#cf2b28" transform="translate(32.49 15.18) scale(0.43880) translate(-240.67 -1.01)"/><path d="M78.46,37.06C78.46,16.01,94.36,0,115.41,0c12.46,0,23.97,5.94,31.55,16.91l-11.29,8.06c-5.62-8.48-12.94-11.72-20.26-11.72-13.1,0-22.27,9.86-22.27,23.81s9.54,23.81,22.64,23.81c11.98,0,18.72-7.05,20.36-14.69h-21.79v-12.35h36.27c.21,1.86,.26,3.98,.26,5.78,0,18.51-13.04,34.52-35.1,34.52s-37.33-16.01-37.33-37.06Z" fill="#fff" transform="translate(14.3 32.78) scale(0.22393) translate(-78.46 0)"/><path d="M162.22,73.07V1.06h12.99l39.82,49.42V1.06h14.32V73.07h-13.2l-39.61-48.89v48.89h-14.32Z" fill="#fff" transform="translate(33.57 33.34) scale(0.21955) translate(-162.22 -1.06)"/></svg><span>Studio</span></div>
+  <div class="brand"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#000"/><path d="M0,73.07V1.06H12.99L52.81,50.48V1.06h14.32V73.07h-13.2L14.32,24.18v48.89H0Z" fill="#fff" transform="translate(15.3 15.18) scale(0.21955) translate(0 -1.06)"/><path d="M240.67 1.01L240.67 8.21L264.23 8.21L243.23 29.21L248.32 34.31L269.5 13.12L269.5 37.04L276.7 37.04L276.7 1.01Z" fill="#cf2b28" transform="translate(32.49 15.18) scale(0.43880) translate(-240.67 -1.01)"/><path d="M78.46,37.06C78.46,16.01,94.36,0,115.41,0c12.46,0,23.97,5.94,31.55,16.91l-11.29,8.06c-5.62-8.48-12.94-11.72-20.26-11.72-13.1,0-22.27,9.86-22.27,23.81s9.54,23.81,22.64,23.81c11.98,0,18.72-7.05,20.36-14.69h-21.79v-12.35h36.27c.21,1.86,.26,3.98,.26,5.78,0,18.51-13.04,34.52-35.1,34.52s-37.33-16.01-37.33-37.06Z" fill="#fff" transform="translate(14.3 32.78) scale(0.22393) translate(-78.46 0)"/><path d="M162.22,73.07V1.06h12.99l39.82,49.42V1.06h14.32V73.07h-13.2l-39.61-48.89v48.89h-14.32Z" fill="#fff" transform="translate(33.57 33.34) scale(0.21955) translate(-162.22 -1.06)"/></svg><span>Studio</span><span class="crumbs" id="crumbs"><span aria-hidden="true">/</span><button type="button" id="crumbHome">Latest stories</button><span class="crumb-sep" aria-hidden="true">/</span><span class="here" id="crumbHere"></span></span></div>
   <nav class="tabs" aria-label="Tools"><a href="./"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/><path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/></svg>Quote card</a><a href="social.html" aria-current="page"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 17h8M8 14h5"/></svg>Social post</a></nav>
   <div class="top-actions">
     <span class="font-chip" id="fontStatus"></span>
@@ -118,6 +137,7 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
   <div class="gallery-head">
     <div><h1>Latest stories</h1><p id="galleryStatus">Loading the latest stories…</p></div>
     <div class="toolbar">
+      <span class="input-icon gallery-search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="field" type="search" id="gallerySearch" placeholder="Search stories" aria-label="Search stories"></span>
       <button type="button" class="btn outline" id="galleryRefresh"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>Check for new</button>
       <button type="button" class="btn primary" id="toEditor"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Blank post</button>
     </div>
@@ -238,6 +258,7 @@ body[data-view="gallery"] .top-actions .btn, body[data-view="gallery"] .font-chi
   </aside>
 </main>
 <script src="canvas-edit.js"></script>
+<script src="studio.js"></script>
 <script src="tour.js"></script>
 <script src="text-quote-render.js"></script>
 <script src="quotes.js"></script>
@@ -279,6 +300,7 @@ let canvas, ctx; // the selected artboard's canvas; see select()
 let kind = 'social'; // the selected artboard's kind: 'social' (photo + headline) or 'quote' (text quote card)
 const tqQuote = $('tqQuote'), tqAttr = $('tqAttr');
 let regions = [];
+const history = new WeakMap(); // per-slide undo stacks; see commit() and travel()
 const titleEl = $('title');
 const state = { preset: PRESETS[0], logo: 'tl', align: 'left', color: '#fff', bg: 'photo', gOn: 'on' };
 // Gradient runs from g0 (full darkness) to g1 (clear), in post pixels; the canvas handles move these.
@@ -376,7 +398,16 @@ function layout(runs, size, maxW) {
 }
 
 // Like CSS text-wrap: balance: the narrowest width that keeps the greedy line count, so no orphans.
+const layoutCache = new Map();
 function balance(runs, size, maxW) {
+  const key = `${size}|${maxW}|${JSON.stringify(runs)}`;
+  if (layoutCache.has(key)) return layoutCache.get(key);
+  if (layoutCache.size > 300) layoutCache.clear();
+  const out = balanceUncached(runs, size, maxW);
+  layoutCache.set(key, out);
+  return out;
+}
+function balanceUncached(runs, size, maxW) {
   const greedy = layout(runs, size, maxW);
   const n = greedy.lines.length;
   if (n < 2) return greedy;
@@ -580,7 +611,7 @@ function applyPreset(p) {
 // Preset thumbnails drawn from the same definitions the renderer uses.
 for (const p of PRESETS) {
   const btn = document.createElement('button');
-  btn.type = 'button'; btn.dataset.name = p.name;
+  btn.type = 'button'; btn.dataset.name = p.name; btn.title = p.name; // a tooltip where a variation hides the label
   const tw = p.w === 'full' ? 85 : 55, tx = p.h === 'left' ? 7.5 : p.h === 'right' ? 92.5 - tw : (100 - tw) / 2;
   const ty = p.v === 'top' ? 'top: 8%' : p.v === 'bottom' ? 'bottom: 8%' : 'top: 42%';
   const lx = p.logo[1] === 'l' ? 'left: 7%' : 'right: 7%', ly = p.logo[0] === 't' ? 'top: 6%' : 'bottom: 6%';
@@ -773,20 +804,30 @@ async function fetchLatest(page) {
 function renderGallery() {
   const grid = $('grid');
   grid.innerHTML = '';
-  for (const st of gallery.stories) {
+  if (!gallery.updated) { // first load: placeholder tiles in the grid's own shape
+    grid.innerHTML = '<span class="tile skeleton"><span class="tile-art"></span><span class="tile-meta"><span></span><span></span></span></span>'.repeat(12);
+    $('galleryStatus').textContent = 'Loading the latest stories…';
+    return;
+  }
+  const q = $('gallerySearch').value.trim().toLowerCase();
+  const shown = gallery.stories.filter((st) => !q || st.title.toLowerCase().includes(q));
+  for (const st of shown) {
     const tile = document.createElement('button');
     tile.type = 'button'; tile.className = 'tile';
-    tile.innerHTML = `<span class="tile-art"${st.thumb ? ` style="background-image:url('${st.thumb}')"` : ''}>
-        ${BADGE}<span class="tile-head"></span>${st.thumb ? '' : '<span class="tile-nophoto">No featured image</span>'}
-        <span class="tile-open">Edit post</span></span>
+    tile.innerHTML = `<span class="tile-art">${st.thumb ? '<img class="tile-img" alt="" loading="lazy">' : '<span class="tile-nophoto">No featured image</span>'}
+        ${BADGE}<span class="tile-head"></span><span class="tile-open">Edit post</span></span>
       <span class="tile-meta"><span class="tile-title"></span><span class="tile-date">${st.isNew ? '<b>New</b> · ' : ''}${ago(st.date)}${files.some((f) => f.story === st.slug) ? ' · <b>Open</b>' : ''}</span></span>`;
+    const img = tile.querySelector('img');
+    if (img) { img.onload = () => img.classList.add('in'); img.src = st.thumb; }
     tile.querySelector('.tile-head').textContent = st.title;
     tile.querySelector('.tile-title').textContent = st.title;
-    tile.addEventListener('click', () => openFromGallery(st));
+    tile.addEventListener('click', () => openFromGallery(st, tile));
     grid.append(tile);
   }
-  $('galleryStatus').textContent = gallery.updated ? `From news.northeastern.edu · checked ${ago(gallery.updated)}` : 'Loading the latest stories…';
+  if (!shown.length) grid.innerHTML = `<p class="gallery-empty">No stories match “${escapeHtml(q)}”. Older stories may match: try Load older stories.</p>`;
+  $('galleryStatus').textContent = `From news.northeastern.edu · checked ${ago(gallery.updated)}`;
 }
+$('gallerySearch').addEventListener('input', renderGallery);
 async function refreshGallery(more = false) {
   if (gallery.loading) return;
   gallery.loading = true;
@@ -810,21 +851,31 @@ async function refreshGallery(more = false) {
     $('galleryRefresh').disabled = $('galleryMore').disabled = false;
   }
 }
-async function openFromGallery(st) {
-  const known = files.some((f) => f.story === st.slug);
-  if (!known) say('Building the post and finding quotes…');
-  const msg = await openStories([st]);
+async function openFromGallery(st, tile) {
+  if (document.body.classList.contains('opening')) return;
+  tile?.classList.add('opening'); document.body.classList.add('opening');
+  const msg = await openStories([st]).finally(() => { tile?.classList.remove('opening'); document.body.classList.remove('opening'); });
   showView('editor');
   if (msg) say(msg);
 }
 function showView(v) {
   document.body.dataset.view = v;
+  updateCrumbs();
+  dispatchEvent(new Event('studio:view'));
   if (v === 'editor') { drawGradientUi(); Tour.init('social-post', EDITOR_TOUR); }
   else { renderGallery(); if (gallery.updated) Tour.init('social-gallery', GALLERY_TOUR); }
 }
 $('galleryRefresh').addEventListener('click', () => refreshGallery());
 $('galleryMore').addEventListener('click', () => refreshGallery(true));
 $('toGallery').addEventListener('click', () => showView('gallery'));
+$('crumbHome').addEventListener('click', () => showView('gallery'));
+function updateCrumbs() {
+  const editing = document.body.dataset.view === 'editor' && file;
+  $('crumbHere').textContent = editing ? (file.story ? file.title : 'Blank post') : '';
+  $('crumbHere').title = $('crumbHere').textContent;
+  $('crumbHome').disabled = !editing;
+  $('crumbs').classList.toggle('home', !editing);
+}
 $('toEditor').addEventListener('click', () => { const f = files.find((x) => !x.story) || makeFile('Blank post', null, [{ ...DEFAULT_POST }]); f.used = true; openFile(f); showView('editor'); });
 setInterval(() => { if (!document.hidden) refreshGallery(); }, 5 * 60 * 1000);
 setInterval(() => { if (document.body.dataset.view === 'gallery') $('galleryStatus').textContent = `From news.northeastern.edu · checked ${ago(gallery.updated || new Date())}`; }, 60 * 1000);
@@ -874,6 +925,7 @@ function openFile(f) {
   if (!f.drawn) { for (let i = 0; i < boards.length; i++) select(i, false); f.drawn = true; } // first render of each artboard
   select(start, false);
   $('importSec').hidden = !!f.story; // a story's file already has its story; import is for the blank post
+  updateCrumbs();
   requestAnimationFrame(() => boards[active].el.scrollIntoView({ inline: 'center', block: 'nearest' }));
 }
 // save: store the outgoing post's settings first (false when it was just removed or overwritten).
@@ -896,17 +948,26 @@ function select(i, save = true) {
   showThumb();
   updateExportLabel();
   draw();
+  baseline(b);
 }
 function removeBoard(i) {
-  if (boards.length === 1) { say('A post needs at least one artboard.'); return; }
+  if (boards.length === 1) { say('A story needs at least one slide.'); return; }
   if (i === active) CanvasEdit.stop();
   else Object.assign(boards[active], snapshot());
-  const wasActive = i === active;
+  const wasActive = i === active, board = boards[i], f = file;
+  if (wasActive) Object.assign(board, snapshot());
   $('stage').append($('gradUi')); // the handle overlay may live in the artboard being removed
-  boards[i].el.remove();
+  board.el.remove();
   boards.splice(i, 1);
   if (active > i || (wasActive && active >= boards.length)) active = Math.max(0, active - 1);
   select(active, false);
+  sayAction(`Deleted ${board.kind === 'quote' ? 'the text quote' : board.kind === 'end' ? 'the end slide' : 'the post'}.`, 'Undo', () => {
+    if (file !== f) openFile(f);
+    Object.assign(boards[active], snapshot());
+    boards.splice(i, 0, board);
+    $('boards').insertBefore(board.el, boards[i + 1]?.el || $('addWrap'));
+    select(i, false);
+  });
 }
 function toggleMenu(open) {
   $('addMenu').hidden = !open;
@@ -984,7 +1045,11 @@ stage.addEventListener('pointerdown', (e) => {
   canvas.setPointerCapture(e.pointerId);
 });
 stage.addEventListener('pointermove', (e) => {
-  if (!dragFrom) return;
+  if (!dragFrom) {
+    if (e.target === canvas && !e.buttons) canvas.style.cursor = inPhoto(cardPoint(e)) ? 'grab' : '';
+    return;
+  }
+  canvas.style.cursor = 'grabbing';
   const p = cardPoint(e);
   if (!moved && Math.hypot(p.x - dragFrom.x, p.y - dragFrom.y) < 4) return;
   moved = true;
@@ -1005,6 +1070,12 @@ stage.addEventListener('pointerup', (e) => {
 // save
 const pngBlob = () => new Promise((res) => canvas.toBlob(res, 'image/png'));
 function say(t) { $('saveMsg').textContent = t; clearTimeout(say.timer); say.timer = setTimeout(() => { $('saveMsg').textContent = ''; }, 4000); }
+function sayAction(t, label, fn) {
+  const m = $('saveMsg'), b = document.createElement('button');
+  m.textContent = t; b.type = 'button'; b.textContent = label; m.append(b);
+  b.addEventListener('click', () => { m.textContent = ''; fn(); });
+  clearTimeout(say.timer); say.timer = setTimeout(() => { m.textContent = ''; }, 7000);
+}
 function save(blob, name) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1108,6 +1179,48 @@ const GALLERY_TOUR = [
   { target: '.tile', side: 'right', title: 'Click a story to edit it', body: 'It opens in the editor with its headline and featured image already placed. Adjust the layout, then export.' },
   { target: '#toEditor', side: 'bottom', title: 'Start from scratch', body: 'Open the editor with a blank post if the story you need isn’t here.' },
 ];
+// Undo and redo, per slide: a snapshot is committed shortly after each change settles.
+function keyOf(snap) { return JSON.stringify({ ...snap, photo: snap.photo ? (snap.photo.currentSrc || snap.photo.src) : null }); }
+function histOf(b) { if (!history.has(b)) history.set(b, { undo: [], redo: [], last: null }); return history.get(b); }
+function baseline(b) { const snap = snapshot(); histOf(b).last = { snap, key: keyOf(snap) }; }
+let commitTimer;
+function commit() {
+  clearTimeout(commitTimer);
+  const b = boards[active];
+  if (!b || document.body.dataset.view !== 'editor') return;
+  const h = histOf(b), snap = snapshot(), key = keyOf(snap);
+  if (!h.last) { h.last = { snap, key }; return; }
+  if (key === h.last.key) return;
+  h.undo.push(h.last.snap); if (h.undo.length > 100) h.undo.shift();
+  h.redo = []; h.last = { snap, key };
+}
+for (const type of ['input', 'click', 'pointerup', 'change']) addEventListener(type, () => { clearTimeout(commitTimer); commitTimer = setTimeout(commit, 350); }, true);
+function travel(dir) {
+  commit();
+  const b = boards[active], h = histOf(b), from = dir < 0 ? h.undo : h.redo;
+  if (!from.length) { say(dir < 0 ? 'Nothing to undo.' : 'Nothing to redo.'); return; }
+  (dir < 0 ? h.redo : h.undo).push(h.last.snap);
+  Object.assign(b, from.pop());
+  select(active, false);
+}
+addEventListener('keydown', (e) => {
+  if (document.body.dataset.view !== 'editor' || !$('addMenu').hidden || document.querySelector('.sheet:not([hidden])')) return;
+  const cmd = e.metaKey || e.ctrlKey, inField = Studio.typing(document.activeElement);
+  if (cmd && e.key.toLowerCase() === 'z' && !inField) { e.preventDefault(); travel(e.shiftKey ? 1 : -1); return; }
+  if (cmd && e.key.toLowerCase() === 'y' && !inField) { e.preventDefault(); travel(1); return; }
+  if (cmd && e.key.toLowerCase() === 'e') { e.preventDefault(); (e.shiftKey && boards.length > 1 ? $('downloadAll') : $('download')).click(); return; }
+  if (inField || cmd) return;
+  const go = (i) => { if (i < 0 || i >= boards.length) return; select(i); boards[i].el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); };
+  if (e.key === 'ArrowRight' || e.key === ']') { e.preventDefault(); go(active + 1); }
+  if (e.key === 'ArrowLeft' || e.key === '[') { e.preventDefault(); go(active - 1); }
+  if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); removeBoard(active); }
+});
+const m = Studio.mod;
+Studio.init({ artHeight: H, shortcuts: [
+  ['Undo / redo', `${m} Z / ${m} ⇧ Z`], ['Next / previous slide', '→ / ←'], ['Delete the selected slide', '⌫'],
+  ['Export the selected slide', `${m} E`], ['Export all slides', `${m} ⇧ E`], ['Bold / italic while editing text', `${m} B / ${m} I`],
+  ['Stop editing text', 'Esc'],
+] });
 showView('gallery');
 refreshGallery();
 </script>

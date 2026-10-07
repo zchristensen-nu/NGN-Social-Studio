@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,72,400;0,72,700;1,72,400;1,72,700&display=swap">
 <link rel="stylesheet" href="studio.css">
+<link rel="stylesheet" href="variants.css">
 <style>
 /* Kepler Std (Adobe) is used when installed; local() pins exact faces, since the family has 100+ widths and optical sizes. */
 @font-face { font-family: "QC Kepler Display"; font-weight: 400; font-style: normal; src: local("Kepler Std Display"), local("KeplerStd-Disp"); }
@@ -76,6 +77,7 @@
   </aside>
 </main>
 <script src="canvas-edit.js"></script>
+<script src="studio.js"></script>
 <script src="tour.js"></script>
 <script>
 // Card spec from the Figma frame: 1098×710, portrait 518 wide, black quote column with 110/48 padding, 33 gap.
@@ -423,6 +425,12 @@ Promise.all(variants.flatMap((v) => [QUOTE_FAMILY, ATTR_FAMILY].map((f) => docum
 document.fonts.ready.then(draw);
 
 CanvasEdit.attach({ canvas, wrap: document.querySelector('.artboard'), W, regions: () => regions, redraw: draw });
+addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e') { e.preventDefault(); $('download').click(); }
+});
+Studio.init({ artHeight: H, artWidth: W, shortcuts: [
+  ['Export the card', `${Studio.mod} E`], ['Bold / italic while editing text', `${Studio.mod} B / ${Studio.mod} I`], ['Stop editing text', 'Esc'],
+] });
 Tour.init('quote-card', [
   { target: '.artboard', side: 'left', title: 'This is your card', body: 'Everything you change shows up here. Click the photo to center it on a face, or click the quote to edit the words right on the card.' },
   { target: '.drop', side: 'left', title: 'Add the photo', body: 'Choose a file, drag one onto the card, or paste with ⌘V. Use Zoom to crop in closer.' },

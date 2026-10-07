@@ -92,6 +92,8 @@ svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor;
 .btn.outline { border-color: var(--line); }
 .btn.primary { background: var(--btn); color: var(--on-sel); padding: 0 12px; }
 .btn.primary:hover { background: var(--btn-hover); }
+.btn:active:not(:disabled), .seg button:active, .presets button:active, .add-board:active, .tile:active .tile-art { transform: translateY(.5px) scale(.985); }
+.btn:disabled { opacity: .45; cursor: default; }
 .btn.icon { width: 28px; padding: 0; color: var(--text-2); }
 .btn.icon:hover { color: var(--text); }
 .btn[aria-pressed="true"] { background: var(--sel-soft); color: var(--sel-text); }
@@ -110,14 +112,20 @@ svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor;
 .frame-label { display: flex; justify-content: space-between; gap: 16px; color: var(--text-2); font-size: 11px; }
 .frame-label span:last-child { color: var(--text-3); font-variant-numeric: tabular-nums; }
 .artboard canvas {
-  display: block; width: auto; height: auto; max-width: 100%;
-  max-height: calc(100vh - var(--bar) - 150px);
-  box-shadow: var(--shadow-art); background: #000; cursor: crosshair; touch-action: none;
+  display: block; width: auto; height: var(--art-h, auto); max-width: none;
+  box-shadow: var(--shadow-art); background: #000; touch-action: none;
+  transition: outline-color .12s;
 }
-.stage.drag .artboard canvas { outline: 2px solid var(--sel); outline-offset: 4px; }
+.stage.drag::after {
+  content: "Drop to use as the photo"; position: absolute; inset: 12px; z-index: 5; display: grid; place-items: center;
+  border: 2px dashed var(--sel); border-radius: 12px; background: var(--sel-soft); color: var(--sel-text); font-weight: 600; font-size: 13px; pointer-events: none;
+}
+.stage.panning, .stage.panning canvas { cursor: grab !important; }
+.stage.grabbing, .stage.grabbing canvas { cursor: grabbing !important; }
+.artboard:not(.selected) canvas:hover { outline: 1.5px solid var(--sel); }
 
 /* toasts float at the bottom of the canvas, like Figma's notifications */
-.toasts { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); display: grid; gap: 8px; justify-items: center; width: max-content; max-width: calc(100% - 32px); pointer-events: none; }
+.toasts { z-index: 7; position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); display: grid; gap: 8px; justify-items: center; width: max-content; max-width: calc(100% - 32px); pointer-events: none; }
 .toast {
   pointer-events: auto; display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px;
   background: var(--toast); color: var(--toast-text); border-radius: 8px; box-shadow: var(--shadow-pop); font-weight: 500;
@@ -233,7 +241,6 @@ select:hover { border-color: var(--line); }
 /* Several artboards side by side; the selected one carries Figma's selection outline */
 .boards { display: flex; gap: 56px; align-items: flex-start; margin: auto; }
 .boards .artboard { flex: none; }
-.boards .artboard canvas { max-height: calc(100vh - var(--bar) - 170px); }
 .artboard.selected canvas { outline: 2px solid var(--sel); outline-offset: 0; }
 .artboard.selected .frame-label span:first-child { color: var(--sel-text); }
 .frame-label .x { visibility: hidden; border: 0; background: none; color: var(--text-3); padding: 0; cursor: pointer; display: flex; }
@@ -247,6 +254,57 @@ select:hover { border-color: var(--line); }
   border: 1.5px dashed var(--line); border-radius: 4px; background: none; color: var(--text-2); font: 500 12px var(--ui); cursor: pointer;
 }
 .add-board:hover { border-color: var(--sel); color: var(--sel-text); background: var(--sel-soft); }
+
+/* Zoom control, bottom right of the canvas */
+.zoom-bar {
+  position: fixed; z-index: 4;
+  display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 8px; background: var(--chrome);
+  box-shadow: var(--shadow-pop), 0 0 0 1px var(--line);
+}
+.zoom-pct { min-width: 48px; height: 26px; border: 0; border-radius: 4px; background: none; color: var(--text); font: 500 12px var(--ui); font-variant-numeric: tabular-nums; cursor: pointer; }
+.zoom-pct:hover { background: var(--field); }
+
+/* Tooltips with shortcut keys */
+.tip {
+  position: fixed; z-index: 60; display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 5px; pointer-events: none;
+  background: #1e1e1e; color: #fff; font: 500 11px/14px var(--ui); white-space: nowrap; box-shadow: 0 2px 8px rgb(0 0 0 / .25);
+  animation: tip-in .12s ease-out;
+}
+.tip kbd, .sheet kbd { font: 500 11px var(--ui); padding: 1px 5px; border-radius: 3px; background: rgb(255 255 255 / .14); color: inherit; }
+@keyframes tip-in { from { opacity: 0; transform: translateY(-2px); } }
+
+/* Keyboard shortcut sheet */
+.sheet { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: rgb(0 0 0 / .32); animation: fade-in .15s ease-out; }
+.sheet-card { width: min(440px, calc(100vw - 32px)); max-height: 80vh; overflow: auto; padding: 8px 20px 16px; border-radius: 12px; background: var(--chrome); box-shadow: var(--shadow-pop), 0 0 0 1px var(--line); animation: toast-in .2s cubic-bezier(.16, 1, .3, 1); }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; height: 44px; }
+.sheet-head h2 { margin: 0; font-size: 13px; font-weight: 600; }
+.sheet dl { margin: 0; display: grid; }
+.sheet dl div { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 7px 0; border-top: 1px solid var(--line); }
+.sheet dt { color: var(--text-2); }
+.sheet dd { margin: 0; display: flex; gap: 4px; align-items: center; color: var(--text-3); }
+.sheet kbd { background: var(--field); color: var(--text); }
+@keyframes fade-in { from { opacity: 0; } }
+
+/* Number fields: type a value, or drag on the label */
+.prop output.val { cursor: text; }
+.prop output.val:hover { box-shadow: inset 0 0 0 1px var(--line); }
+.val-edit { width: 100%; border: 0; outline: 1.5px solid var(--sel); font: inherit; text-align: right; }
+.prop > label.scrub { cursor: ew-resize; user-select: none; }
+body.scrubbing, body.scrubbing * { cursor: ew-resize !important; user-select: none; }
+
+/* Panels ease in when the selected slide type changes their contents */
+.panel .sec, .panel .quote-note { animation: sec-in .18s ease-out; }
+@keyframes sec-in { from { opacity: 0; transform: translateY(2px); } }
+
+/* Layout variation picker */
+.variant-pick { display: flex; align-items: center; gap: 6px; color: var(--text-3); }
+.variant-pick select { width: auto; height: 28px; padding-right: 26px; }
+
+/* Where you are: tool, then the story that's open */
+.crumbs { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--text-3); font-weight: 500; }
+.crumbs button { border: 0; background: none; padding: 4px 6px; margin: 0 -6px; border-radius: 4px; color: var(--text-2); font: inherit; cursor: pointer; white-space: nowrap; }
+.crumbs button:hover { background: var(--field); color: var(--text); }
+.crumbs .here { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 32ch; }
 
 /* Onboarding tour */
 .tour-ring {
@@ -289,7 +347,8 @@ select:hover { border-color: var(--line); }
   .font-chip { display: none; }
   .workspace, .workspace.with-left { display: block; }
   .stage { padding: 24px 16px 64px; }
-  .artboard canvas { max-height: 70vh; }
+  .artboard canvas { height: auto; max-height: 70vh; max-width: 100%; }
+  .zoom-bar, .variant-pick, .crumbs { display: none; }
   .panel.left, .panel.right { border: 0; border-top: 1px solid var(--line); }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }

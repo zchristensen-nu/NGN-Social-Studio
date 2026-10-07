@@ -108,7 +108,7 @@ window.CanvasEdit = (() => {
       const root = o.root || cv();
       root.addEventListener('pointermove', (e) => {
         const r = e.target === cv() && !box && !e.buttons && hit(point(e));
-        cv().style.cursor = r ? 'text' : '';
+        if (r) cv().style.cursor = 'text'; else if (cv().style.cursor === 'text') cv().style.cursor = ''; // leave the page's own cursors
         hover.hidden = !r;
         if (r) cover(hover, r, 8);
       });
