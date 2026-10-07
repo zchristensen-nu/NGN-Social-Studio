@@ -4,10 +4,10 @@
 // editor === editing is left for the on-canvas editor to show.
 window.TextQuoteCard = (() => {
   // Frame spec from the Figma "car data - quote" template: 1080×1350 on cream, a column of brand arrows on the right,
-  // Inter 48/160% quote and 40/150% attribution, 80px left inset, centered in an 872px-tall block with a 64px gap.
+  // Inter 48/160% quote and 40/140% attribution, 80px left inset, centered in an 872px-tall block with a 64px gap.
   const W = 1080, H = 1350, X = 80, BLOCK_TOP = 239, BLOCK_H = 872, GAP = 64;
   const Q = { size: 48, lh: 76.8, maxW: 764, color: 'rgba(7,7,7,.964)' };
-  const A = { size: 40, lh: 60, maxW: 728, color: '#000' }; // 150%, tighter than the Figma file's 160%
+  const A = { size: 40, lh: 56, maxW: 728, color: '#000' }; // 140%, tighter than the Figma file's 160%
   const BG = '#FFFCF9', ARROW = '#F9F6F0';
   const FAMILY = '"Inter", system-ui, sans-serif';
 
