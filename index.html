@@ -9,7 +9,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,72,400;0,72,700;1,72,400;1,72,700&display=swap">
 <link rel="stylesheet" href="studio.css">
-<link rel="stylesheet" href="variants.css">
 <style>
 /* Kepler Std (Adobe) is used when installed; local() pins exact faces, since the family has 100+ widths and optical sizes. */
 @font-face { font-family: "QC Kepler Display"; font-weight: 400; font-style: normal; src: local("Kepler Std Display"), local("KeplerStd-Disp"); }
@@ -33,9 +32,9 @@
 </header>
 <main class="workspace">
   <section class="stage" id="stage" aria-label="Canvas">
-    <div class="artboard">
-      <div class="frame-label"><span>Weekend quote</span><span>1098 × 710 · exports at 2×</span></div>
-      <canvas id="card" width="2196" height="1420" aria-label="Quote card preview"></canvas>
+    <div class="artboard selected">
+      <div class="frame-label"><span>Weekend quote</span><span>Exports at 2×</span></div>
+      <div class="art-wrap"><canvas id="card" width="2196" height="1420" aria-label="Quote card preview"></canvas><span class="sel" aria-hidden="true"><i></i><i></i><i></i><i></i><b>1098 × 710</b></span></div>
     </div>
     <div class="toasts">
       <div class="toast" id="warn" hidden><span class="dot"></span><span>Text runs past the card’s margins</span><button type="button" id="fit">Shrink to fit</button></div>
@@ -282,7 +281,7 @@ function loadPhoto(file) {
   img.onload = () => {
     photo = img;
     $('zoom').value = 100; focus = { x: 0.5, y: 0.4 };
-    draw(); Studio.ambient(canvas);
+    draw();
   };
   img.onerror = () => say('That file couldn’t be opened as an image. Try a JPG, PNG or WebP.');
   img.src = URL.createObjectURL(file);
@@ -412,7 +411,7 @@ const variants = ['400', 'italic 400', '700', 'italic 700'];
 Promise.all(variants.flatMap((v) => [QUOTE_FAMILY, ATTR_FAMILY].map((f) => document.fonts.load(`${v} 40px ${f}`)))).then(draw, draw);
 document.fonts.ready.then(draw);
 
-CanvasEdit.attach({ canvas, wrap: document.querySelector('.artboard'), W, regions: () => regions, redraw: draw });
+CanvasEdit.attach({ canvas, wrap: document.querySelector('.art-wrap'), W, regions: () => regions, redraw: draw });
 addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e') { e.preventDefault(); $('download').click(); }
 });

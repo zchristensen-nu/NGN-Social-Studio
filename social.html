@@ -9,7 +9,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700&family=Newsreader:ital,opsz,wght@0,72,400;0,72,700;1,72,400;1,72,700&display=swap">
 <link rel="stylesheet" href="studio.css">
-<link rel="stylesheet" href="variants.css">
 <style>
 /* Kepler Std (Adobe) is used when installed; local() pins the Subhead cut (the social template's), since the family has 100+ widths and optical sizes. */
 @font-face { font-family: "QC Kepler Subhead"; font-weight: 400; font-style: normal; src: local("Kepler Std Subhead"), local("KeplerStd-Subh"); }
@@ -49,7 +48,7 @@ body:not([data-kind="social"]) .kind-social, body:not([data-kind="quote"]) .kind
 .add-board[aria-expanded="true"] { border-color: var(--sel); color: var(--sel-text); background: var(--sel-soft); }
 .menu {
   position: absolute; z-index: 5; top: 50%; right: calc(100% + 8px); transform: translateY(-50%); width: 232px; padding: 4px; /* opens over the last artboard; the right panel would clip it */
-  background: var(--chrome); border-radius: 8px; box-shadow: var(--shadow-pop), 0 0 0 1px var(--line); animation: toast-in .2s cubic-bezier(.16, 1, .3, 1);
+  background: var(--chrome); border-radius: 8px; box-shadow: var(--shadow-pop), 0 0 0 1px var(--line); animation: pop-in .3s var(--spring);
 }
 .menu button { display: flex; gap: 10px; align-items: flex-start; width: 100%; padding: 8px; border: 0; border-radius: 6px; background: none; color: var(--text); font: 12px var(--ui); text-align: left; cursor: pointer; }
 .menu button:hover, .menu button:focus-visible { background: var(--sel-soft); outline: none; }
@@ -134,7 +133,7 @@ body[data-view="gallery"] .top-actions .btn { display: none; }
 </header>
 <section class="gallery" id="gallery" aria-label="Latest stories">
   <div class="gallery-head">
-    <div><h1>Latest stories</h1><p id="galleryStatus">Loading the latest stories…</p></div>
+    <div><h1 id="galleryTitle">Latest stories</h1><p id="galleryStatus">Loading the latest stories…</p></div>
     <div class="toolbar">
       <span class="input-icon gallery-search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="field" type="search" id="gallerySearch" placeholder="Search stories" aria-label="Search stories"></span>
       <button type="button" class="btn outline" id="galleryRefresh"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>Check for new</button>
@@ -684,7 +683,7 @@ function showThumb() {
   }
   else { t.style.backgroundImage = ''; t.innerHTML = THUMB_ICON; }
 }
-function usePhoto(img) { photo = img; $('zoom').value = 100; focus = { x: 0.5, y: 0.4 }; showThumb(); updateExportLabel(); draw(); Studio.ambient(canvas); }
+function usePhoto(img) { photo = img; $('zoom').value = 100; focus = { x: 0.5, y: 0.4 }; showThumb(); updateExportLabel(); draw(); }
 function loadPhoto(file) {
   if (!file) return;
   const url = URL.createObjectURL(file);
@@ -818,7 +817,8 @@ function renderGallery() {
     grid.append(tile);
   }
   if (!shown.length) grid.innerHTML = `<p class="gallery-empty">No stories match “${escapeHtml(q)}”. Older stories may match: try Load older stories.</p>`;
-  $('galleryStatus').textContent = `From news.northeastern.edu · checked ${ago(gallery.updated)}`;
+  $('galleryTitle').textContent = Studio.greeting();
+  $('galleryStatus').textContent = galleryLine();
 }
 $('gallerySearch').addEventListener('input', renderGallery);
 async function refreshGallery(more = false) {
@@ -830,7 +830,12 @@ async function refreshGallery(more = false) {
     const items = await fetchLatest(page);
     const fresh = items.filter((st) => !gallery.seen.has(st.id));
     const firstLoad = !gallery.seen.size;
-    for (const st of fresh) { gallery.seen.add(st.id); st.isNew = !firstLoad && !more; }
+    // New means published since this browser last looked; after that, since the page loaded.
+    let lastSeen = 0;
+    try { lastSeen = +localStorage.getItem('ngn-studio-last-seen') || 0; } catch { /* private window */ }
+    for (const st of fresh) { gallery.seen.add(st.id); st.isNew = firstLoad ? !!lastSeen && +st.date > lastSeen : !more; }
+    if (firstLoad) gallery.sinceLast = fresh.filter((st) => st.isNew).length;
+    if (!more && fresh.length) try { localStorage.setItem('ngn-studio-last-seen', String(Math.max(...gallery.stories.concat(fresh).map((st) => +st.date)))); } catch { /* private window */ }
     if (more) { gallery.stories.push(...fresh); gallery.page = page; }
     else gallery.stories.unshift(...fresh);
     gallery.updated = new Date();
@@ -871,7 +876,12 @@ function updateCrumbs() {
 }
 $('toEditor').addEventListener('click', () => { const f = files.find((x) => !x.story) || makeFile('Blank post', null, [{ ...DEFAULT_POST }]); f.used = true; openFile(f); showView('editor'); });
 setInterval(() => { if (!document.hidden) refreshGallery(); }, 5 * 60 * 1000);
-setInterval(() => { if (document.body.dataset.view === 'gallery') $('galleryStatus').textContent = `From news.northeastern.edu · checked ${ago(gallery.updated || new Date())}`; }, 60 * 1000);
+function galleryLine() {
+  const n = gallery.sinceLast || 0;
+  return `${n ? `${n} new ${n === 1 ? 'story' : 'stories'} since you last looked. ` : 'Here’s what’s new on news.northeastern.edu. '}Checked ${ago(gallery.updated || new Date())}.`;
+}
+setInterval(() => { if (document.body.dataset.view === 'gallery') $('galleryStatus').textContent = galleryLine(); }, 60 * 1000);
+addEventListener('studio:name', () => { if (gallery.updated) $('galleryTitle').textContent = Studio.greeting(); });
 
 
 // Files hold artboards; each artboard keeps its own settings and the panels edit the selected one.
@@ -884,9 +894,9 @@ const snapshot = () => ({
 function makeBoard(post) {
   const el = document.createElement('div');
   el.className = 'artboard';
-  el.innerHTML = `<div class="frame-label"><span><span class="name"></span></span><span>1080 × 1350
+  el.innerHTML = `<div class="frame-label"><span><span class="name"></span></span><span>
     <button type="button" class="x" aria-label="Delete post" title="Delete post"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span></div>
-    <div class="art-wrap"><canvas width="1080" height="1350" aria-label="Post preview"></canvas></div>`;
+    <div class="art-wrap"><canvas width="1080" height="1350" aria-label="Post preview"></canvas><span class="sel" aria-hidden="true"><i></i><i></i><i></i><i></i><b>1080 × 1350</b></span></div>`;
   const board = { ...post, el, canvas: el.querySelector('canvas') };
   el.querySelector('.x').addEventListener('click', (e) => { e.stopPropagation(); removeBoard(boards.indexOf(board)); });
   return board;
@@ -941,7 +951,7 @@ function select(i, save = true) {
   showThumb();
   updateExportLabel();
   draw();
-  Studio.ambient(canvas); // the Stage look lights the canvas with the slide's color
+  // the Stage look lights the canvas with the slide's color
   baseline(b);
 }
 function removeBoard(i) {
@@ -1205,7 +1215,13 @@ addEventListener('keydown', (e) => {
   if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); removeBoard(active); }
 });
 const m = Studio.mod;
-Studio.init({ artHeight: H, shortcuts: [
+Studio.init({ artHeight: H, tools: [
+  { id: 'new', label: 'New slide', key: 'N', icon: '<path d="M12 5v14M5 12h14"/>', run: () => {
+    $('addBoard').scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    setTimeout(() => toggleMenu(true), 250);
+  } },
+], shortcuts: [
+  ['New slide', 'N'],
   ['Undo / redo', `${m} Z / ${m} ⇧ Z`], ['Next / previous slide', '→ / ←'], ['Delete the selected slide', '⌫'],
   ['Export the selected slide', `${m} E`], ['Export all slides', `${m} ⇧ E`], ['Bold / italic while editing text', `${m} B / ${m} I`],
   ['Stop editing text', 'Esc'],
