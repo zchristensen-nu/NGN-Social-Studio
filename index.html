@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>Weekend Quote Card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,72,400;0,72,700;1,72,400;1,72,700&display=swap">
 <link rel="stylesheet" href="studio.css">
+<style>@media (max-width: 960px) { .workspace { --m-stage-h: min(46dvh, calc(100vw * .68 + 64px)); } }</style>
 <style>
 /* Kepler Std (Adobe) is used when installed; local() pins exact faces, since the family has 100+ widths and optical sizes. */
 @font-face { font-family: "QC Kepler Display"; font-weight: 400; font-style: normal; src: local("Kepler Std Display"), local("KeplerStd-Disp"); }
@@ -47,7 +48,7 @@
       <div class="sec-head"><h2>Photo</h2></div>
       <label class="drop">
         <span class="thumb" id="thumb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></span>
-        <span><strong>Choose or drop a photo</strong><span class="sub">Or paste with ⌘V. Click the photo on the canvas to set the focus point.</span></span>
+        <span><strong>Choose or drop a photo</strong><span class="sub">Or paste it in. Click or tap the photo on the canvas to set the focus point.</span></span>
         <input type="file" id="file" accept="image/*">
       </label>
       <div class="prop"><label for="zoom">Zoom</label><input type="range" id="zoom" min="100" max="250" value="100"><output class="val" for="zoom" id="zoomOut"></output></div>

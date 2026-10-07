@@ -13,9 +13,13 @@ window.Studio = (() => {
   let stage, artH = 1350, artW = 0, scale = 1, fitting = true, echoing = false;
   const fitScale = () => {
     const pad = getComputedStyle(stage);
-    const h = stage.clientHeight - parseFloat(pad.paddingTop) - parseFloat(pad.paddingBottom) - 28; // frame label row
+    // Less the frame label row and any room a layout keeps below the slide (the phone filmstrip).
+    const reserve = parseFloat(pad.getPropertyValue('--fit-reserve')) || 0;
+    const h = stage.clientHeight - parseFloat(pad.paddingTop) - parseFloat(pad.paddingBottom) - 28 - reserve;
     const w = stage.clientWidth - parseFloat(pad.paddingLeft) - parseFloat(pad.paddingRight);
-    return Math.max(0.1, Math.min(1, h / artH, artW ? w / artW : Infinity));
+    // A tool can also cap by width through CSS (--fit-aspect: the slide's width over height), as phones do.
+    const aspect = parseFloat(pad.getPropertyValue('--fit-aspect')) || 0;
+    return Math.max(0.05, Math.min(1, h / artH, artW ? w / artW : Infinity, aspect ? w / (artH * aspect) : Infinity));
   };
   function setScale(s, anchor) {
     const old = scale;
@@ -122,6 +126,7 @@ window.Studio = (() => {
     };
     const hide = () => { clearTimeout(timer); if (owner) warmUntil = Date.now() + 600; owner = null; tip.hidden = true; };
     document.addEventListener('pointerover', (e) => {
+      if (e.pointerType !== 'mouse') return; // no hover on touch: a tap would leave a tooltip behind
       const el = e.target.closest('[data-tip]');
       if (!el || el === owner) return;
       clearTimeout(timer);

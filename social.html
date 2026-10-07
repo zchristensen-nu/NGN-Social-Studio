@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>Social Post Builder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -107,7 +107,48 @@ body[data-view="gallery"] .top-actions .btn { display: none; }
 .back-row { padding: 8px 8px 0; }
 .back-row .btn { color: var(--text-2); padding-left: 4px; }
 .back-row .btn:hover { color: var(--text); }
-@media (max-width: 960px) { .gallery { padding: 24px 16px 64px; } .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 24px 16px; } }
+/* Phones: the grid is a feed; the editor shows the selected slide large with the story's other slides in a filmstrip
+   underneath, and the properties scroll as a sheet below. */
+@media (max-width: 960px) {
+  .gallery { padding: 20px 16px calc(32px + env(safe-area-inset-bottom, 0px)); overscroll-behavior: contain; }
+  .gallery-head { flex-direction: column; align-items: stretch; gap: 14px; margin-bottom: 20px; }
+  .gallery-head h1 { font-size: 24px; line-height: 30px; }
+  .gallery-head .toolbar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .gallery-search { width: auto; grid-column: 1 / -1; }
+  .gallery-search .field { height: 40px; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px 12px; }
+  .tile-title { font-size: 13px; line-height: 17px; }
+  .tile-open { display: none; }
+  .gallery-foot .btn { width: 100%; height: 40px; }
+  /* editor top bar: back to stories, then actions; the tool tabs only on the grid */
+  body[data-view="editor"] .topbar .tabs { display: none; }
+  .crumbs { display: flex; }
+  .crumbs > span:first-child, .crumbs .crumb-sep, .crumbs .here { display: none; }
+  .crumbs.home { display: none; }
+  .crumbs button { display: flex; align-items: center; gap: 2px; margin: 0; padding: 6px 8px 6px 4px; font-size: 14px; }
+  .crumbs button::before { content: ""; width: 9px; height: 9px; border: solid currentColor; border-width: 0 0 2px 2px; transform: rotate(45deg); margin: 0 4px 0 6px; }
+  #downloadAll[data-count]::after { content: attr(data-count); position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--text); color: var(--chrome); font: 600 10px/16px var(--ui); }
+  #downloadAll { position: relative; }
+  #downloadAll span { display: none; }
+  /* filmstrip */
+  .stage { --fit-reserve: 92px; --fit-aspect: .8; display: block; overflow: hidden; }
+  .boards { flex-wrap: wrap; justify-content: center; align-content: flex-start; gap: 12px 8px; margin: 0; }
+  .boards .artboard.selected { order: -1; flex: 0 0 100%; justify-items: center; }
+  .boards .artboard.selected .frame-label { width: calc(var(--art-h) * .8); min-width: 0; }
+  .boards .artboard:not(.selected) .frame-label { display: none; }
+  .boards .artboard:not(.selected) canvas { height: 64px; border-radius: 3px; touch-action: manipulation; }
+  .boards .add-wrap { margin-top: 0; align-self: auto; height: 64px; }
+  .boards .add-board { width: 52px; font-size: 0; gap: 0; border-radius: 4px; }
+  /* New slide menu as a bottom sheet */
+  .menu {
+    position: fixed; left: 8px; right: 8px; top: auto; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); width: auto; transform: none;
+    padding: 8px; border-radius: 16px; z-index: 30;
+  }
+  .menu button { padding: 12px; font-size: 15px; }
+  .menu small { font-size: 13px; line-height: 17px; }
+  .layout-row { gap: 16px; }
+  .place { grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(3, 34px); }
+}
 #storyUrl { resize: vertical; min-height: 64px; font-size: 12px; line-height: 17px; }
 #gOn { width: 96px; }
 /* Gradient handles: an overlay on the artboard, never part of the export. Shown while hovering the post. */
@@ -209,7 +250,7 @@ body[data-view="gallery"] .top-actions .btn { display: none; }
       <div class="sec-head"><h2>Photo</h2></div>
       <label class="drop">
         <span class="thumb" id="thumb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></span>
-        <span><strong>Choose or drop a photo or video</strong><span class="sub">Or paste with ⌘V. Click the photo on the canvas to set the focus point.</span></span>
+        <span><strong>Choose or drop a photo or video</strong><span class="sub">Or paste it in. Click or tap the photo on the canvas to set the focus point.</span></span>
         <input type="file" id="file" accept="image/*,video/*">
       </label>
       <div class="prop"><label for="zoom">Zoom</label><input type="range" id="zoom" min="100" max="250" value="100"><output class="val" for="zoom"></output></div>
@@ -510,7 +551,8 @@ function drawGradientUi() {
   set($('gEnd'), { cx: g1.x, cy: g1.y });
   // keep handles ~9px on screen whatever the preview scale
   const shown = canvas.getBoundingClientRect().width;
-  const r = shown ? 9 * W / shown : 16;
+  const px = matchMedia('(pointer: coarse)').matches ? 14 : 9; // bigger for fingers
+  const r = shown ? px * W / shown : 16;
   $('gStart').setAttribute('r', r); $('gEnd').setAttribute('r', r);
   $('gEnd').style.fill = state.color === '#000' ? 'rgb(255 255 255 / .15)' : '';
   $('gStart').style.fill = state.color === '#000' ? '#fff' : '';
@@ -956,6 +998,7 @@ function select(i, save = true) {
   $('downloadAll').hidden = boards.length < 2;
   if (file) file.active = i;
   $('downloadAll').querySelector('span').textContent = `Export all ${boards.length}`;
+  $('downloadAll').dataset.count = boards.length;
   if (isVideo(photo)) photo.play().catch(() => {});
   showThumb();
   updateExportLabel();
