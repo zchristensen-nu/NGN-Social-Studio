@@ -137,7 +137,9 @@ body[data-view="gallery"] .top-actions .btn { display: none; }
   .boards .artboard.selected .frame-label { width: calc(var(--art-h) * .8); min-width: 0; }
   .boards .artboard:not(.selected) .frame-label { display: none; }
   .boards .artboard:not(.selected) canvas { height: 64px; border-radius: 3px; touch-action: manipulation; }
-  .boards .add-wrap { margin-top: 0; align-self: auto; height: 64px; }
+  .boards .add-wrap { margin-top: 0; align-self: auto; height: 64px; order: 9999; }
+  .boards .artboard.selected { order: -1 !important; }
+  .boards .mirror { display: block; height: 64px; width: auto; border-radius: 3px; outline: 2px solid var(--sel); outline-offset: 2px; }
   .boards .add-board { width: 52px; font-size: 0; gap: 0; border-radius: 4px; }
   /* New slide menu as a bottom sheet */
   .menu {
@@ -149,6 +151,7 @@ body[data-view="gallery"] .top-actions .btn { display: none; }
   .layout-row { gap: 16px; }
   .place { grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(3, 34px); }
 }
+.mirror { display: none; } /* desktop shows every slide full size */
 #storyUrl { resize: vertical; min-height: 64px; font-size: 12px; line-height: 17px; }
 #gOn { width: 96px; }
 /* Gradient handles: an overlay on the artboard, never part of the export. Shown while hovering the post. */
@@ -558,7 +561,25 @@ function drawGradientUi() {
   $('gStart').style.fill = state.color === '#000' ? '#fff' : '';
 }
 
+// Phones show the selected slide large above a filmstrip of every slide. The filmstrip keeps the selected one in its
+// place as a live mirror of the big canvas, so the strip always reads as the whole story in order.
+const mirror = document.createElement('canvas');
+mirror.className = 'mirror'; mirror.width = 216; mirror.height = 270; mirror.setAttribute('aria-hidden', 'true');
+let mirrorQueued = false;
+function queueMirror() {
+  if (mirrorQueued) return;
+  mirrorQueued = true;
+  requestAnimationFrame(() => {
+    mirrorQueued = false;
+    if (!canvas) return;
+    boards.forEach((b, i) => { b.el.style.order = i * 2 + 1; });
+    mirror.style.order = active * 2 + 1;
+    if (mirror.parentNode !== $('boards')) $('boards').insertBefore(mirror, $('addWrap'));
+    mirror.getContext('2d').drawImage(canvas, 0, 0, mirror.width, mirror.height);
+  });
+}
 function draw() {
+  queueMirror();
   if (kind === 'end') {
     TextQuoteCard.drawEnd(ctx);
     regions = []; geo = null;
