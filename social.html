@@ -27,6 +27,35 @@
 .logo-row { display: flex; gap: 12px; align-items: center; }
 #storyForm { display: grid; gap: 6px; }
 /* Post kinds: the panels show only the controls the selected artboard uses */
+body[data-view="review"] main.workspace, body[data-view="review"] .gallery, body:not([data-view="review"]) .review { display: none !important; }
+.review { min-height: 0; overflow-y: auto; padding: 32px 40px 72px; }
+.review-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; max-width: 1400px; margin: 0 auto 8px; }
+.review-head h1 { margin: 0; font-size: 20px; font-weight: 600; }
+.review-head p { margin: 4px 0 0; color: var(--text-2); }
+.review-key { max-width: 1400px; margin: 0 auto 24px; }
+.review-key b { font-weight: 600; padding: 0 4px; border-radius: 3px; }
+.k-subj { color: #c8102e; } .k-face { color: #b7791f; } .k-text { color: #2563eb; }
+.review-toggle { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.review-tally { font-variant-numeric: tabular-nums; color: var(--text-2); }
+.review-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 28px 24px; max-width: 1400px; margin: 0 auto; }
+.rcard { display: grid; gap: 8px; padding: 12px; border-radius: 10px; background: var(--chrome); box-shadow: 0 0 0 1px var(--line); }
+.rcard[data-mark="hit"] { box-shadow: 0 0 0 2px var(--ok); }
+.rcard[data-mark="miss"] { box-shadow: 0 0 0 2px var(--sel); }
+.rpair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rpair figure { margin: 0; display: grid; gap: 4px; }
+.rpair figcaption { font-size: 11px; color: var(--text-3); }
+.rshot { position: relative; }
+.rshot canvas { width: 100%; height: auto; display: block; border-radius: 3px; background: var(--field); }
+.rshot canvas.over { position: absolute; inset: 0; display: none; }
+.review.overlay .rshot canvas.over { display: block; }
+.rtitle { font-weight: 600; font-size: 13px; line-height: 17px; }
+.rwhy { margin: 0; color: var(--text-2); font-size: 12px; line-height: 16px; }
+.ralt { margin: 0; color: var(--text-3); font-size: 11px; line-height: 15px; }
+.ractions { display: flex; gap: 6px; }
+.ractions .btn[aria-pressed="true"][data-v="hit"] { background: var(--ok); color: #fff; }
+.ractions .btn[aria-pressed="true"][data-v="miss"] { background: var(--sel); color: #fff; }
+.ractions .open { margin-left: auto; }
+@media (max-width: 960px) { .review { padding: 20px 16px 48px; } .review-grid { grid-template-columns: 1fr; } }
 body:not([data-kind="social"]) .kind-social, body:not([data-kind="quote"]) .kind-quote, body:not([data-kind="end"]) .kind-end, body[data-kind="social"] .kind-fixed { display: none; }
 /* Layout: Figma's alignment grid. Each cell is where the headline sits; the picked cell (and the hovered one) shows
    three text lines aligned to its column, the others a dot. */
@@ -189,6 +218,18 @@ body[data-view="gallery"] .top-actions .btn { display: none; }
   <div class="gallery-foot"><button type="button" class="btn outline" id="galleryMore">Load older stories</button></div>
 </section>
 
+<section class="review" id="review" aria-label="Auto layout review">
+  <div class="review-head">
+    <div><h1>Auto layout review</h1><p id="reviewStatus">Loading the last 50 stories…</p></div>
+    <div class="toolbar">
+      <label class="review-toggle"><input type="checkbox" id="reviewOverlay"> Show what it saw</label>
+      <span class="review-tally" id="reviewTally"></span>
+    </div>
+  </div>
+  <p class="note review-key">Left: the house default (Bottom, photo centered). Right: auto layout. Mark each auto result Good or Miss; your marks stay in this browser. Overlay: <b class="k-subj">subject</b> <b class="k-face">faces</b> <b class="k-text">headline</b>.</p>
+  <div class="review-grid" id="reviewGrid"></div>
+</section>
+
 <main class="workspace">
   <section class="stage" id="stage" aria-label="Canvas">
     <div class="boards" id="boards">
@@ -309,6 +350,7 @@ body[data-view="gallery"] .top-actions .btn { display: none; }
 <script src="tour.js"></script>
 <script src="text-quote-render.js"></script>
 <script src="quotes.js"></script>
+<script src="autolayout.js"></script>
 <script>
 // Frame spec from the Figma "Bottom" template: 1080×1350, 80px margins, 64px logo, Kepler 72/120%.
 const W = 1080, H = 1350, M = 80, LOGO = 64, LOGO_GAP = 40, FULL_W = 920, NARROW_W = 600;
@@ -771,6 +813,11 @@ function loadPhoto(file) {
   requestAnimationFrame(tick);
 })();
 
+// Auto layout is opt-in while it's reviewed: social.html?auto applies it to opened stories, ?review shows the
+// last 50 stories with what it picked next to the house default.
+const REVIEW = new URLSearchParams(location.search).has('review');
+const AUTO = REVIEW || new URLSearchParams(location.search).has('auto');
+
 // Stories come from the site's public REST API (stories are the `newspost` type).
 const SITE = 'https://news.northeastern.edu';
 const STORY_FIELDS = '_embed=wp:featuredmedia&_fields=id,date,link,slug,title,_links,_embedded';
@@ -806,14 +853,101 @@ async function buildStoryFile(st) {
     fetch(`${SITE}/wp-json/wp/v2/newspost/${st.id}?_fields=content`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
   ]);
   const quotes = content ? StoryQuotes.find(content.content.rendered, 3) : [];
+  const auto = AUTO && img ? autoPost(chooseLayout(await AutoLayout.analyze(img), img, escapeHtml(st.title))) : {};
   const posts = [
-    { ...DEFAULT_POST, kind: 'social', photo: img, title: escapeHtml(st.title), slug: st.slug },
+    { ...DEFAULT_POST, kind: 'social', photo: img, title: escapeHtml(st.title), slug: st.slug, ...auto },
     ...quotes.map((q) => quotePost(st.slug, q)),
     { ...DEFAULT_POST, kind: 'end', story: st.slug }, // the carousel's closing slide
   ];
   const f = makeFile(st.title, st.slug, posts);
   return { file: f, noImage: !img, quotes: quotes.length };
 }
+// Auto layout, part 2: score every template layout against the subject and pick the one whose headline sits in
+// the space the photo leaves open. The crop slides along the photo's free axis too, so the subject can move
+// away from the text. Lower cost wins:
+//   faces under the headline or logo (worst), interest the headline covers, a busy or bright background behind the
+//   white headline, interest cropped out, subject cut off, plus a small preference for the house default (Bottom).
+const AUTO_PRIOR = { Bottom: 0, Top: 0.04, 'Bottom Centered': 0.06, 'Top Centered': 0.08, Left: 0.08, Right: 0.08,
+  'Bottom Left Corner': 0.08, 'Bottom Right Corner': 0.08, 'Top Left Corner': 0.1, 'Top Right Corner': 0.1, Centered: 0.15 };
+function chooseLayout(an, img, titleHtml) {
+  const [iw, ih] = mediaSize(img), s = Math.max(W / iw, H / ih), dw = iw * s, dh = ih * s;
+  const saved = { ...state }, savedTitle = titleEl.innerHTML;
+  titleEl.innerHTML = titleHtml;
+  const { gw, gh, sal, busy, lum } = an, cw = dw / gw, ch = dh / gh;
+  let salAll = 0;
+  for (const v of sal) salAll += v;
+  const steps = (free) => (free < 1 ? [0] : Array.from({ length: 9 }, (_, k) => -free * k / 8));
+  const inter = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+  const toCanvas = (b, dx, dy) => ({ x: dx + b.x * dw, y: dy + b.y * dh, w: b.w * dw, h: b.h * dh });
+  const results = [];
+  for (const p of PRESETS) {
+    Object.assign(state, { preset: p, logo: p.logo, align: p.align, textW: null, bg: 'photo' });
+    const tb = textBox(), lb = logoBox();
+    const text = { x: tb.x - 24, y: tb.y - 24, w: tb.w + 48, h: tb.h + 48 }, logo = { x: lb.x - 16, y: lb.y - 16, w: LOGO + 32, h: LOGO + 32 };
+    const covers = (x, y) => (x >= text.x && x <= text.x + text.w && y >= text.y && y <= text.y + text.h) || (x >= logo.x && x <= logo.x + logo.w && y >= logo.y && y <= logo.y + logo.h);
+    for (const dx of steps(dw - W)) for (const dy of steps(dh - H)) {
+      let inCrop = 0, under = 0, nText = 0, busyText = 0, lumText = 0;
+      for (let gy = 0; gy < gh; gy++) {
+        const y = dy + (gy + 0.5) * ch;
+        if (y < 0 || y > H) continue;
+        for (let gx = 0; gx < gw; gx++) {
+          const x = dx + (gx + 0.5) * cw;
+          if (x < 0 || x > W) continue;
+          const v = sal[gy * gw + gx];
+          inCrop += v;
+          if (covers(x, y)) under += v;
+          if (x >= text.x && x <= text.x + text.w && y >= text.y && y <= text.y + text.h) {
+            nText++; busyText += busy[gy * gw + gx]; lumText += lum[gy * gw + gx];
+          }
+        }
+      }
+      const subj = toCanvas(an.subject, dx, dy);
+      const subjCut = 1 - inter(subj, { x: 0, y: 0, w: W, h: H }) / Math.max(1, subj.w * subj.h);
+      let faceCover = 0;
+      for (const f of an.faces) {
+        const fb = toCanvas(f, dx, dy), area = Math.max(1, fb.w * fb.h);
+        faceCover = Math.max(faceCover, (inter(fb, text) + inter(fb, logo)) / area);
+      }
+      const parts = {
+        faces: 4 * faceCover,
+        covered: 2.2 * (inCrop ? under / inCrop : 0),
+        cropped: 1.2 * (salAll ? 1 - inCrop / salAll : 0),
+        cut: 1.5 * subjCut,
+        // the template's gradient darkens behind the text, so brightness only counts past mid-grey
+        busy: nText ? 1.6 * busyText / nText : 0,
+        bright: nText ? 1.2 * Math.max(0, lumText / nText - 0.45) : 0,
+        prior: AUTO_PRIOR[p.name] ?? 0.08,
+      };
+      const cost = Object.values(parts).reduce((a, b) => a + b, 0);
+      results.push({ preset: p, dx, dy, cost, parts, text: { x: tb.x, y: tb.y, w: tb.w, h: tb.h }, logo: { ...lb, w: LOGO, h: LOGO } });
+    }
+  }
+  Object.assign(state, saved); titleEl.innerHTML = savedTitle;
+  results.sort((a, b) => a.cost - b.cost);
+  const best = results[0];
+  // One result per layout for the runner-up list.
+  const seen = new Set(), ranked = results.filter((r) => !seen.has(r.preset.name) && seen.add(r.preset.name));
+  const subj = toCanvas(an.subject, best.dx, best.dy);
+  const third = (c, n, words) => words[Math.min(2, Math.max(0, Math.floor(c / n * 3)))];
+  const where = `${third(subj.y + subj.h / 2, H, ['top', 'middle', 'bottom'])} ${third(subj.x + subj.w / 2, W, ['left', 'center', 'right'])}`;
+  const what = an.faces.length ? (an.faces.length === 1 ? 'A face is' : `${an.faces.length} faces are`) : 'The subject is';
+  return {
+    preset: best.preset,
+    focus: { x: (W / 2 - best.dx) / dw, y: (H / 2 - best.dy) / dh },
+    reason: `${what} ${where.replace('middle center', 'in the center').replace(/^(top|middle|bottom) /, '$1 ')}; the headline goes ${best.preset.name.toLowerCase()}, where the photo is ${best.parts.busy < 0.25 ? 'calm' : 'busier but clear of the subject'}.`,
+    best, ranked, analysis: an, crop: { dw, dh },
+  };
+}
+// The post settings an auto choice produces.
+function autoPost(choice) {
+  const p = choice.preset, [ax, ay, bx, by] = GRAD_FOR[p.grad];
+  return {
+    focus: choice.focus, zoom: 100, auto: choice,
+    state: { ...DEFAULT_POST.state, preset: p, logo: p.logo, align: p.align, textW: null, bg: 'photo' },
+    g0: { x: ax, y: ay }, g1: { x: bx, y: by },
+  };
+}
+
 const quotePost = (story, q) => ({
   ...DEFAULT_POST, kind: 'quote', story,
   quote: q ? escapeHtml(q.quote) : 'Type the quote here.',
@@ -931,6 +1065,7 @@ async function openFromGallery(st, tile) {
   if (msg) say(msg);
 }
 function showView(v) {
+  if (v === 'gallery' && REVIEW) v = 'review';
   document.body.dataset.view = v;
   updateCrumbs();
   dispatchEvent(new Event('studio:view'));
@@ -1299,8 +1434,83 @@ Studio.init({ artHeight: H, shortcuts: [
   ['Export the selected slide', `${m} E`], ['Export all slides', `${m} ⇧ E`], ['Bold / italic while editing text', `${m} B / ${m} I`],
   ['Stop editing text', 'Esc'],
 ] });
+// The review page: the last 50 stories, the house default beside what auto layout picks, with an overlay of what
+// it detected and Good / Miss marks kept in this browser.
+const MARKS_KEY = 'ngn-auto-review';
+const marks = (() => { try { return JSON.parse(localStorage.getItem(MARKS_KEY)) || {}; } catch { return {}; } })();
+function tally() {
+  const v = Object.values(marks), hit = v.filter((m) => m === 'hit').length, miss = v.filter((m) => m === 'miss').length;
+  $('reviewTally').textContent = v.length ? `${hit} good · ${miss} miss${miss === 1 ? '' : 'es'}${hit + miss ? ` · ${Math.round(hit / (hit + miss) * 100)}% good` : ''}` : '';
+}
+function shot(src, w = 216) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = Math.round(w * H / W);
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+  return c;
+}
+function overlay(choice, w = 216) {
+  const c = document.createElement('canvas'), k = w / W;
+  c.width = w; c.height = Math.round(w * H / W); c.className = 'over';
+  const x = c.getContext('2d'), { dx, dy } = choice.best, { dw, dh } = choice.crop;
+  const box = (b, color, dash) => {
+    x.strokeStyle = color; x.lineWidth = 2; x.setLineDash(dash || []);
+    x.strokeRect(b.x * k, b.y * k, b.w * k, b.h * k);
+  };
+  const img = (b) => ({ x: dx + b.x * dw, y: dy + b.y * dh, w: b.w * dw, h: b.h * dh });
+  box(img(choice.analysis.subject), '#c8102e', [5, 3]);
+  for (const f of choice.analysis.faces) box(img(f), '#f6ad37');
+  box(choice.best.text, '#2563eb');
+  return c;
+}
+async function runReview() {
+  const res = await fetch(`${SITE}/wp-json/wp/v2/newspost?per_page=50&${STORY_FIELDS}`);
+  const stories = (await res.json()).map(storyFromApi);
+  const grid = $('reviewGrid');
+  let done = 0;
+  for (const st of stories) {
+    $('reviewStatus').textContent = `Laying out ${++done} of ${stories.length}…`;
+    const card = document.createElement('div');
+    card.className = 'rcard'; card.dataset.mark = marks[st.slug] || '';
+    const img = st.src ? await loadImage(st.src, true).catch(() => null) : null;
+    if (!img) continue;
+    const choice = chooseLayout(await AutoLayout.analyze(img), img, escapeHtml(st.title));
+    // Render both versions through the real editor, then copy them out.
+    const f = makeFile(st.title, null, [
+      { ...DEFAULT_POST, kind: 'social', photo: img, title: escapeHtml(st.title) },
+      { ...DEFAULT_POST, kind: 'social', photo: img, title: escapeHtml(st.title), ...autoPost(choice) },
+    ]);
+    openFile(f);
+    files.splice(files.indexOf(f), 1);
+    const runners = choice.ranked.slice(1, 3).map((r) => `${r.preset.name} ${r.cost.toFixed(2)}`).join(', ');
+    card.innerHTML = `<div class="rtitle"></div>
+      <div class="rpair"><figure><div class="rshot a"></div><figcaption>Default: Bottom</figcaption></figure>
+        <figure><div class="rshot b"></div><figcaption>Auto: ${choice.preset.name} · cost ${choice.best.cost.toFixed(2)}</figcaption></figure></div>
+      <p class="rwhy"></p><p class="ralt">Next best: ${runners}</p>
+      <div class="ractions"><button type="button" class="btn outline" data-v="hit">Good</button><button type="button" class="btn outline" data-v="miss">Miss</button>
+        <button type="button" class="btn outline open">Open in editor</button></div>`;
+    card.querySelector('.rtitle').textContent = st.title;
+    card.querySelector('.rwhy').textContent = choice.reason;
+    card.querySelector('.rshot.a').append(shot(f.boards[0].canvas));
+    card.querySelector('.rshot.b').append(shot(f.boards[1].canvas), overlay(choice));
+    const paint = () => card.querySelectorAll('[data-v]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.v === marks[st.slug]));
+    card.querySelector('.ractions').addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      if (b.classList.contains('open')) { openFromGallery(st); return; }
+      marks[st.slug] = marks[st.slug] === b.dataset.v ? undefined : b.dataset.v;
+      try { localStorage.setItem(MARKS_KEY, JSON.stringify(marks)); } catch { /* private window */ }
+      card.dataset.mark = marks[st.slug] || ''; paint(); tally();
+    });
+    paint();
+    grid.append(card);
+    await new Promise((r) => setTimeout(r)); // let the page paint between stories
+  }
+  $('reviewStatus').textContent = `${stories.length} latest stories from news.northeastern.edu, laid out ${new Date().toLocaleString()}.`;
+  tally();
+}
+$('reviewOverlay').addEventListener('change', (e) => $('review').classList.toggle('overlay', e.target.checked));
 showView('gallery');
 refreshGallery();
+if (REVIEW) Promise.all([document.fonts.ready, TextQuoteCard.ready()]).then(runReview);
 </script>
 </body>
 </html>
