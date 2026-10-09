@@ -34,7 +34,7 @@ body[data-view="review"] main.workspace, body[data-view="review"] .gallery, body
 .review-head p { margin: 4px 0 0; color: var(--text-2); }
 .review-key { max-width: 1400px; margin: 0 auto 24px; }
 .review-key b { font-weight: 600; padding: 0 4px; border-radius: 3px; }
-.k-subj { color: #c8102e; } .k-face { color: #b7791f; } .k-text { color: #2563eb; }
+.k-focal { color: #16a34a; } .k-subj { color: #c8102e; } .k-face { color: #b7791f; } .k-text { color: #2563eb; }
 .review-toggle { display: flex; gap: 6px; align-items: center; cursor: pointer; }
 .review-tally { font-variant-numeric: tabular-nums; color: var(--text-2); }
 .review-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 28px 24px; max-width: 1400px; margin: 0 auto; }
@@ -226,7 +226,7 @@ body[data-view="gallery"] .top-actions .btn { display: none; }
       <span class="review-tally" id="reviewTally"></span>
     </div>
   </div>
-  <p class="note review-key">Left: the house default (Bottom, photo centered). Right: auto layout. Mark each auto result Good or Miss; your marks stay in this browser. Overlay: <b class="k-subj">subject</b> <b class="k-face">faces</b> <b class="k-text">headline</b>.</p>
+  <p class="note review-key">Left: the house default (Bottom, photo centered). Right: auto layout. Mark each auto result Good or Miss; your marks stay in this browser. Overlay: <b class="k-subj">subject</b> <b class="k-face">faces</b> <b class="k-text">headline</b> <b class="k-focal">focal point and gaze</b>, with the rule-of-thirds grid.</p>
   <div class="review-grid" id="reviewGrid"></div>
 </section>
 
@@ -867,6 +867,9 @@ async function buildStoryFile(st) {
 // away from the text. Lower cost wins:
 //   faces under the headline or logo (worst), interest the headline covers, a busy or bright background behind the
 //   white headline, interest cropped out, subject cut off, plus a small preference for the house default (Bottom).
+// Composition on top: the focal point (eyes, or the peak of interest) near a rule-of-thirds intersection (a
+// centered subject is allowed at a small cost), room in front of a face turned to one side, and the headline
+// placed opposite the subject so the two balance.
 const AUTO_PRIOR = { Bottom: 0, Top: 0.04, 'Bottom Centered': 0.06, 'Top Centered': 0.08, Left: 0.08, Right: 0.08,
   'Bottom Left Corner': 0.08, 'Bottom Right Corner': 0.08, 'Top Left Corner': 0.1, 'Top Right Corner': 0.1, Centered: 0.15 };
 function chooseLayout(an, img, titleHtml) {
@@ -908,8 +911,19 @@ function chooseLayout(an, img, titleHtml) {
         const fb = toCanvas(f, dx, dy), area = Math.max(1, fb.w * fb.h);
         faceCover = Math.max(faceCover, (inter(fb, text) + inter(fb, logo)) / area);
       }
+      const fp = { x: dx + an.focal.x * dw, y: dy + an.focal.y * dh };
+      const half = Math.hypot(W, H) / 2;
+      const thirds = Math.min(...[[1, 1], [2, 1], [1, 2], [2, 2]].map(([a, b]) => Math.hypot(fp.x - W * a / 3, fp.y - H * b / 3))) / half;
+      const centered = Math.hypot(fp.x - W / 2, fp.y - H / 2) / half + 0.12;
+      const room = an.focal.look > 0 ? (W - fp.x) / W : an.focal.look < 0 ? fp.x / W : 1;
+      const tc = { x: tb.x + tb.w / 2, y: tb.y + tb.h / 2 };
+      const behind = an.focal.look && Math.sign(tc.x - fp.x) === -an.focal.look && Math.abs(tc.x - fp.x) > W * 0.15;
+      const apart = Math.min(1, Math.hypot(tc.x - fp.x, tc.y - fp.y) / half);
       const parts = {
         faces: 4 * faceCover,
+        thirds: 0.9 * Math.min(thirds, centered),
+        lookRoom: 1.2 * Math.max(0, 0.42 - room) + (behind ? 0.12 : 0),
+        balance: 0.25 * (1 - apart),
         covered: 2.2 * (inCrop ? under / inCrop : 0),
         cropped: 1.2 * (salAll ? 1 - inCrop / salAll : 0),
         cut: 1.5 * subjCut,
@@ -919,7 +933,7 @@ function chooseLayout(an, img, titleHtml) {
         prior: AUTO_PRIOR[p.name] ?? 0.08,
       };
       const cost = Object.values(parts).reduce((a, b) => a + b, 0);
-      results.push({ preset: p, dx, dy, cost, parts, text: { x: tb.x, y: tb.y, w: tb.w, h: tb.h }, logo: { ...lb, w: LOGO, h: LOGO } });
+      results.push({ preset: p, dx, dy, cost, parts, fp, text: { x: tb.x, y: tb.y, w: tb.w, h: tb.h }, logo: { ...lb, w: LOGO, h: LOGO } });
     }
   }
   Object.assign(state, saved); titleEl.innerHTML = savedTitle;
@@ -928,13 +942,17 @@ function chooseLayout(an, img, titleHtml) {
   // One result per layout for the runner-up list.
   const seen = new Set(), ranked = results.filter((r) => !seen.has(r.preset.name) && seen.add(r.preset.name));
   const subj = toCanvas(an.subject, best.dx, best.dy);
-  const third = (c, n, words) => words[Math.min(2, Math.max(0, Math.floor(c / n * 3)))];
-  const where = `${third(subj.y + subj.h / 2, H, ['top', 'middle', 'bottom'])} ${third(subj.x + subj.w / 2, W, ['left', 'center', 'right'])}`;
-  const what = an.faces.length ? (an.faces.length === 1 ? 'A face is' : `${an.faces.length} faces are`) : 'The subject is';
+  const fp = best.fp, half = Math.hypot(W, H) / 2;
+  const col = fp.x < W * 0.42 ? 'left' : fp.x > W * 0.58 ? 'right' : 'center', row = fp.y < H * 0.42 ? 'upper' : fp.y > H * 0.58 ? 'lower' : '';
+  const place = Math.hypot(fp.x - W / 2, fp.y - H / 2) / half < 0.1 ? 'centered'
+    : best.parts.thirds < 0.9 * 0.1 ? `on the ${[row, col].filter(Boolean).join('-')} thirds point` : `${[row, col].filter(Boolean).join(' ')} of the frame`;
+  const who = an.faces.length ? (an.faces.length === 1 ? 'The face is' : `The main face (of ${an.faces.length}) is`) : 'The subject is';
+  const facing = an.focal.look ? `, turned ${an.focal.look > 0 ? 'right' : 'left'}` : '';
+  const space = best.parts.lookRoom === 0 && an.focal.look && Math.sign(best.text.x + best.text.w / 2 - fp.x) === an.focal.look && Math.abs(best.text.x + best.text.w / 2 - fp.x) > W * 0.2 ? ' in the space the face looks into' : '';
   return {
     preset: best.preset,
     focus: { x: (W / 2 - best.dx) / dw, y: (H / 2 - best.dy) / dh },
-    reason: `${what} ${where.replace('middle center', 'in the center').replace(/^(top|middle|bottom) /, '$1 ')}; the headline goes ${best.preset.name.toLowerCase()}, where the photo is ${best.parts.busy < 0.25 ? 'calm' : 'busier but clear of the subject'}.`,
+    reason: `${who} ${place}${facing}. The headline goes ${best.preset.name.toLowerCase()}${space}, ${best.parts.busy < 0.45 ? 'over a calm part of the photo' : 'clear of the subject'}.`,
     best, ranked, analysis: an, crop: { dw, dh },
   };
 }
@@ -1460,6 +1478,17 @@ function overlay(choice, w = 216) {
   box(img(choice.analysis.subject), '#c8102e', [5, 3]);
   for (const f of choice.analysis.faces) box(img(f), '#f6ad37');
   box(choice.best.text, '#2563eb');
+  x.setLineDash([2, 3]); x.strokeStyle = 'rgba(255,255,255,.6)'; x.lineWidth = 1;
+  for (const t of [1, 2]) {
+    x.beginPath(); x.moveTo(c.width * t / 3, 0); x.lineTo(c.width * t / 3, c.height); x.stroke();
+    x.beginPath(); x.moveTo(0, c.height * t / 3); x.lineTo(c.width, c.height * t / 3); x.stroke();
+  }
+  const fp = choice.best.fp;
+  x.setLineDash([]); x.fillStyle = '#22c55e'; x.beginPath(); x.arc(fp.x * k, fp.y * k, 4, 0, Math.PI * 2); x.fill();
+  if (choice.analysis.focal.look) {
+    x.strokeStyle = '#22c55e'; x.lineWidth = 2; x.beginPath();
+    x.moveTo(fp.x * k, fp.y * k); x.lineTo(fp.x * k + choice.analysis.focal.look * 18, fp.y * k); x.stroke();
+  }
   return c;
 }
 async function runReview() {

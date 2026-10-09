@@ -34,7 +34,15 @@ window.AutoLayout = (() => {
         for (const det of d.detect(src).detections) {
           if ((det.categories?.[0]?.score ?? 1) < min) continue;
           const b = det.boundingBox, kx = sw / src.width, ky = sh / src.height;
-          found.push({ x: (ox + b.originX * kx) / iw, y: (oy + b.originY * ky) / ih, w: b.width * kx / iw, h: b.height * ky / ih });
+          // Which way the face is turned: the nose's offset from the middle of the face box (eye keypoints drift in
+          // profile, the nose doesn't). 1 = toward the right of the photo, -1 = left, 0 = facing the camera.
+          const nose = det.keypoints?.[2];
+          let look = 0;
+          if (nose) {
+            const yaw = (nose.x * src.width - (b.originX + b.width / 2)) / b.width;
+            look = yaw > 0.12 ? 1 : yaw < -0.12 ? -1 : 0;
+          }
+          found.push({ x: (ox + b.originX * kx) / iw, y: (oy + b.originY * ky) / ih, w: b.width * kx / iw, h: b.height * ky / ih, look });
         }
       } catch { /* a failed tile just finds nothing */ }
     };
@@ -149,7 +157,21 @@ window.AutoLayout = (() => {
           if (x >= 0 && y >= 0 && x < map.gw && y < map.gh) map.sal[y * map.gw + x] = Math.max(map.sal[y * map.gw + x], 1);
     }
     const subject = fs.length ? union(fs.map(headAndShoulders)) : subjectBox(map);
-    return { ...map, faces: fs, subject };
+    // The focal point composition is judged by: the eyes of the largest face, else the peak of interest.
+    let focal;
+    if (fs.length) {
+      const f = fs.reduce((a, b) => (b.w * b.h > a.w * a.h ? b : a));
+      focal = { x: f.x + f.w / 2, y: f.y + f.h * 0.38, look: f.look };
+    } else {
+      let sx = 0, sy = 0, sw = 0;
+      for (let y = 0; y < map.gh; y++) for (let x = 0; x < map.gw; x++) {
+        const v = map.sal[y * map.gw + x];
+        if (v < 0.75) continue;
+        sx += (x + 0.5) * v; sy += (y + 0.5) * v; sw += v;
+      }
+      focal = sw ? { x: sx / sw / map.gw, y: sy / sw / map.gh, look: 0 } : { x: subject.x + subject.w / 2, y: subject.y + subject.h / 2, look: 0 };
+    }
+    return { ...map, faces: fs, subject, focal };
   }
 
   return { analyze };
