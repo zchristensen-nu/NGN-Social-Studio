@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>Weekend Quote Card</title>
+<link rel="preconnect" href="https://use.typekit.net" crossorigin>
+<link rel="stylesheet" href="https://use.typekit.net/kab0ulp.css"><!-- the site's Adobe Fonts kit: Kepler for everyone -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,72,400;0,72,700;1,72,400;1,72,700&display=swap">
@@ -81,8 +83,8 @@
 <script>
 // Card spec from the Figma frame: 1098×710, portrait 518 wide, black quote column with 110/48 padding, 33 gap.
 const W = 1098, H = 710, PW = 518, PAD_X = 48, PAD_Y = 110, GAP = 33, SCALE = 2;
-const QUOTE_FAMILY = '"QC Kepler Display", "Newsreader", Georgia, serif';
-const ATTR_FAMILY = '"QC Kepler Text", "Newsreader", Georgia, serif';
+const QUOTE_FAMILY = '"QC Kepler Display", "kepler-std-display", "Newsreader", Georgia, serif'; // installed copy, then the site's kit
+const ATTR_FAMILY = '"QC Kepler Text", "kepler-std", "Newsreader", Georgia, serif';
 const DEFAULTS = { qSize: 40, aSize: 26 };
 
 const $ = (id) => document.getElementById(id);
