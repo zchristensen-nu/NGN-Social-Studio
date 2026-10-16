@@ -877,6 +877,25 @@ async function buildStoryFile(st) {
 // placed opposite the subject so the two balance.
 const AUTO_PRIOR = { Bottom: 0, Top: 0.04, 'Bottom Centered': 0.06, 'Top Centered': 0.08, Left: 0.08, Right: 0.08,
   'Bottom Left Corner': 0.08, 'Bottom Right Corner': 0.08, 'Top Left Corner': 0.1, 'Top Right Corner': 0.1, Centered: 0.15 };
+// Darkness at a point for gradient handles [ax, ay, bx, by]: (1 + cos πt) / 2 along the axis, as drawGradient() paints it.
+function gradShade([ax, ay, bx, by]) {
+  const ux = bx - ax, uy = by - ay, ul = ux * ux + uy * uy;
+  return (x, y) => (1 + Math.cos(Math.PI * Math.min(1, Math.max(0, ((x - ax) * ux + (y - ay) * uy) / ul)))) / 2;
+}
+// Gradient handles for a layout, cut short to just past the text box. The text's far edge must sit at least as dark as
+// white type needs over this photo: enough to pull the brightest part of the text area down to luminance 0.3, never less
+// than a light 0.35 for texture. The preset's full-length gradient is the ceiling.
+function fitGradient(p, tb, textLum) {
+  const full = GRAD_FOR[p.grad];
+  if (p.grad === 'even') return full;
+  const dark = +$('gDark').value / 100, pad = 24;
+  const need = Math.min(dark, Math.max(0.35, 1 - 0.3 / Math.max(textLum, 0.01)));
+  const edge = { bottom: H - tb.y, top: tb.y + tb.h, left: tb.x + tb.w, right: W - tb.x }[p.grad] + pad;
+  const maxLen = Math.hypot(full[2] - full[0], full[3] - full[1]);
+  const len = Math.min(maxLen, Math.PI * edge / Math.acos(Math.min(1, 2 * need / dark - 1)));
+  const [ax, ay] = full, ux = (full[2] - ax) / maxLen, uy = (full[3] - ay) / maxLen;
+  return [ax, ay, ax + ux * len, ay + uy * len];
+}
 function chooseLayout(an, img, titleHtml) {
   const [iw, ih] = mediaSize(img), s = Math.max(W / iw, H / ih), dw = iw * s, dh = ih * s;
   const saved = { ...state }, savedTitle = titleEl.innerHTML;
@@ -884,7 +903,9 @@ function chooseLayout(an, img, titleHtml) {
   const { gw, gh, sal, busy, lum } = an, cw = dw / gw, ch = dh / gh;
   let salAll = 0;
   for (const v of sal) salAll += v;
-  const steps = (free) => (free < 1 ? [0] : Array.from({ length: 9 }, (_, k) => -free * k / 8));
+  // The default crop (DEFAULT_POST's focus) is always a candidate; moving off it has to buy something.
+  const dx0 = Math.min(0, Math.max(W - dw, W / 2 - 0.5 * dw)), dy0 = Math.min(0, Math.max(H - dh, H / 2 - 0.4 * dh));
+  const steps = (free, home) => (free < 1 ? [0] : [home, ...Array.from({ length: 9 }, (_, k) => -free * k / 8)]);
   const inter = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
   const toCanvas = (b, dx, dy) => ({ x: dx + b.x * dw, y: dy + b.y * dh, w: b.w * dw, h: b.h * dh });
   const results = [];
@@ -893,8 +914,9 @@ function chooseLayout(an, img, titleHtml) {
     const tb = textBox(), lb = logoBox();
     const text = { x: tb.x - 24, y: tb.y - 24, w: tb.w + 48, h: tb.h + 48 }, logo = { x: lb.x - 16, y: lb.y - 16, w: LOGO + 32, h: LOGO + 32 };
     const covers = (x, y) => (x >= text.x && x <= text.x + text.w && y >= text.y && y <= text.y + text.h) || (x >= logo.x && x <= logo.x + logo.w && y >= logo.y && y <= logo.y + logo.h);
-    for (const dx of steps(dw - W)) for (const dy of steps(dh - H)) {
-      let inCrop = 0, under = 0, nText = 0, busyText = 0, lumText = 0;
+    for (const dx of steps(dw - W, dx0)) for (const dy of steps(dh - H, dy0)) {
+      let inCrop = 0, under = 0, nText = 0, busyText = 0, lumText = 0, lumMax = 0;
+      const cells = [];
       for (let gy = 0; gy < gh; gy++) {
         const y = dy + (gy + 0.5) * ch;
         if (y < 0 || y > H) continue;
@@ -903,18 +925,22 @@ function chooseLayout(an, img, titleHtml) {
           if (x < 0 || x > W) continue;
           const v = sal[gy * gw + gx];
           inCrop += v;
-          if (covers(x, y)) under += v;
+          cells.push(x, y, v);
           if (x >= text.x && x <= text.x + text.w && y >= text.y && y <= text.y + text.h) {
-            nText++; busyText += busy[gy * gw + gx]; lumText += lum[gy * gw + gx];
+            nText++; busyText += busy[gy * gw + gx]; lumText += lum[gy * gw + gx]; lumMax = Math.max(lumMax, lum[gy * gw + gx]);
           }
         }
       }
+      // The gradient darkens far more of the photo than the text does, so size it to this photo: only as long as the text needs.
+      const grad = fitGradient(p, tb, nText ? (lumText / nText + lumMax) / 2 : 0);
+      const shade = gradShade(grad);
+      for (let i = 0; i < cells.length; i += 3) under += cells[i + 2] * (covers(cells[i], cells[i + 1]) ? 1 : shade(cells[i], cells[i + 1]));
       const subj = toCanvas(an.subject, dx, dy);
       const subjCut = 1 - inter(subj, { x: 0, y: 0, w: W, h: H }) / Math.max(1, subj.w * subj.h);
       let faceCover = 0;
       for (const f of an.faces) {
         const fb = toCanvas(f, dx, dy), area = Math.max(1, fb.w * fb.h);
-        faceCover = Math.max(faceCover, (inter(fb, text) + inter(fb, logo)) / area);
+        faceCover = Math.max(faceCover, (inter(fb, text) + inter(fb, logo)) / area, shade(fb.x + fb.w / 2, fb.y + fb.h / 2));
       }
       const fp = { x: dx + an.focal.x * dw, y: dy + an.focal.y * dh };
       const half = Math.hypot(W, H) / 2;
@@ -936,9 +962,11 @@ function chooseLayout(an, img, titleHtml) {
         busy: nText ? 1.6 * busyText / nText : 0,
         bright: nText ? 1.2 * Math.max(0, lumText / nText - 0.45) : 0,
         prior: AUTO_PRIOR[p.name] ?? 0.08,
+        // reviewers marked composition-only crop shifts as misses (off-centre drop, face cut at the edge)
+        shift: 1.2 * (Math.abs(dx - dx0) / Math.max(1, dw - W) + Math.abs(dy - dy0) / Math.max(1, dh - H)),
       };
       const cost = Object.values(parts).reduce((a, b) => a + b, 0);
-      results.push({ preset: p, dx, dy, cost, parts, fp, text: { x: tb.x, y: tb.y, w: tb.w, h: tb.h }, logo: { ...lb, w: LOGO, h: LOGO } });
+      results.push({ preset: p, dx, dy, cost, grad, parts, fp, text: { x: tb.x, y: tb.y, w: tb.w, h: tb.h }, logo: { ...lb, w: LOGO, h: LOGO } });
     }
   }
   Object.assign(state, saved); titleEl.innerHTML = savedTitle;
@@ -963,7 +991,7 @@ function chooseLayout(an, img, titleHtml) {
 }
 // The post settings an auto choice produces.
 function autoPost(choice) {
-  const p = choice.preset, [ax, ay, bx, by] = GRAD_FOR[p.grad];
+  const p = choice.preset, [ax, ay, bx, by] = choice.grad ?? choice.best?.grad ?? GRAD_FOR[p.grad];
   return {
     focus: choice.focus, zoom: 100, auto: choice,
     state: { ...DEFAULT_POST.state, preset: p, logo: p.logo, align: p.align, textW: null, bg: 'photo' },
