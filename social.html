@@ -226,6 +226,7 @@ body[data-view="gallery"] .top-actions .btn { display: none; }
     <div class="toolbar">
       <label class="review-toggle"><input type="checkbox" id="reviewOverlay"> Show what it saw</label>
       <span class="review-tally" id="reviewTally"></span>
+      <button type="button" class="btn outline" id="reviewExport">Export marks</button>
     </div>
   </div>
   <p class="note review-key">Left: the house default (Bottom, photo centered). Right: auto layout. Mark each auto result Good or Miss; your marks stay in this browser. Overlay: <b class="k-subj">subject</b> <b class="k-face">faces</b> <b class="k-text">headline</b> <b class="k-focal">focal point and gaze</b>, with the rule-of-thirds grid.</p>
@@ -1540,6 +1541,13 @@ async function runReview() {
   $('reviewStatus').textContent = `${stories.length} latest stories from news.northeastern.edu, laid out ${new Date().toLocaleString()}.`;
   tally();
 }
+// Copy the marks as JSON (story slug -> hit or miss) so they can be compared with other approaches.
+$('reviewExport').addEventListener('click', () => {
+  const text = JSON.stringify(Object.fromEntries(Object.entries(marks).filter(([, v]) => v)), null, 1);
+  navigator.clipboard.writeText(text).then(() => say('Marks copied. Paste them into the chat.'), () => {
+    const t = document.createElement('textarea'); t.value = text; document.body.append(t); t.select(); say('Press ⌘C to copy the selected marks.');
+  });
+});
 $('reviewOverlay').addEventListener('change', (e) => $('review').classList.toggle('overlay', e.target.checked));
 showView('gallery');
 refreshGallery();
